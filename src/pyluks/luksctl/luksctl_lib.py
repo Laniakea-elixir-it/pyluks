@@ -9,9 +9,13 @@ from ..utilities import run_command, create_logger
 
 ################################################################################
 # LOGGING FACILITY
-LOGFILE = '/tmp/luksctl.log'
+
 LOGGER_NAME = 'luksctl'
-luksctl_logger = create_logger(logfile=LOGFILE, name=LOGGER_NAME)
+
+# Instantiate the logger
+luksctl_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
+                               logger_name=LOGGER_NAME,
+                               loggers_section='logs')
 
 
 

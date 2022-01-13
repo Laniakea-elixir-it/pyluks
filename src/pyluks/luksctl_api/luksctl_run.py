@@ -20,9 +20,12 @@ __prefix__ = sys.prefix
 ################################################################################
 # LOGGING FACILITY
 
-LOGFILE = '/tmp/luksctl-api.log'
 LOGGER_NAME = 'luksctl_api'
-api_logger = create_logger(logfile=LOGFILE, name=LOGGER_NAME)
+
+# Instantiate the logger
+api_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
+                           logger_name=LOGGER_NAME,
+                           loggers_section='logs')
 
 
 

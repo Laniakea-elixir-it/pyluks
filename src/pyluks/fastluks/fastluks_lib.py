@@ -11,7 +11,7 @@ import distro
 from configparser import ConfigParser
 
 # Import internal dependencies
-from ..utilities import run_command, create_logger
+from ..utilities import run_command, create_logger, DEFAULT_LOGFILES
 from ..vault_support import write_secret_to_vault
 
 
@@ -33,9 +33,12 @@ if DISTNAME not in ['ubuntu','centos']:
 ################################################################################
 # LOGGING FACILITY
 
-LOGFILE = '/tmp/fastluks.log'
 LOGGER_NAME = 'fastluks'
-fastluks_logger = create_logger(logfile=LOGFILE, name=LOGGER_NAME)
+
+# Instantiate the logger
+fastluks_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
+                                logger_name=LOGGER_NAME,
+                                loggers_section='logs')
 
 #____________________________________
 # Custom stdout logger
@@ -328,6 +331,12 @@ class device:
             config_luks['mountpoint'] = self.mountpoint
             config_luks['filesystem'] = self.filesystem
             config_luks['header_path'] = f'{luks_header_backup_dir}/{luks_header_backup_file}'
+
+            config.add_section('logs')
+            config_logs = config['logs']
+            for name,logfile in DEFAULT_LOGFILES.items():
+                config_logs[name] = logfile
+
             if save_passphrase_locally:
                 config_luks['passphrase'] = s3cret
                 config.write(f)

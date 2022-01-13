@@ -9,8 +9,6 @@ from pyluks import __version__
 from pyluks.luksctl_api import __path__ as luksctl_api_path_list
 from pyluks.luksctl_api.luksctl_run import __prefix__ as environment_prefix
 from pyluks.luksctl_api.luksctl_run import master, wn
-from pyluks.luksctl_api.luksctl_run import LOGFILE as LOGFILE_api
-from pyluks.luksctl.luksctl_lib import LOGFILE as LOGFILE_luksctl
 
 
 ################################################################################
@@ -65,9 +63,6 @@ def master_setup(options):
                                         environment_prefix=environment_prefix,
                                         ssl=options.ssl, user=options.user,
                                         group=options.user)
-    
-    shutil.chown(path=LOGFILE_api, user=options.user, group=options.user)
-    shutil.chown(path=LOGFILE_luksctl, user=options.user, group=options.user)
 
 
 def wn_setup(options):
@@ -80,9 +75,6 @@ def wn_setup(options):
     wn_node.write_systemd_unit_file(working_directory=luksctl_api_path,
                                     environment_prefix=environment_prefix,
                                     user=options.user, group=options.user)
-
-    shutil.chown(path=LOGFILE_api, user=options.user, group=options.user)   
-    shutil.chown(path=LOGFILE_luksctl, user=options.user, group=options.user)
 
 
 ################################################################################

@@ -6,7 +6,7 @@ import logging
 from configparser import ConfigParser
 
 # Import internal dependencies
-from .luksctl_run import wn
+from .luksctl_run import read_api_config, wn
 
 
 
@@ -15,24 +15,13 @@ from .luksctl_run import wn
 
 app = Flask(__name__)
 
-# Load configs
-luks_cryptdev_file = '/etc/luks/luks-cryptdev.ini'
-if os.path.exists(luks_cryptdev_file):
-    
-    # Read cryptdev ini file
-    config = ConfigParser()
-    config.read(luks_cryptdev_file)
-    api_config = config['luksctl_api']
+api_configs = read_api_config()
+nfs_mountpoint_list = api_configs['nfs_mountpoint_list']
+sudo_path = api_configs['sudo_path']
 
-    # Set variables from cryptdev ini file
-    nfs_mountpoint_list = json.loads(api_config['NFS_MOUNTPOINT_LIST']) if 'NFS_MOUNTPOINT_LIST' in api_config else None
-    
-    # Define node instance
-    wn_node = wn(nfs_mountpoint_list)
-
-else:
-    raise FileNotFoundError('Cryptdev ini file missing.')
-
+# Define node instance
+wn_node = wn(nfs_mountpoint_list=nfs_mountpoint_list,
+             sudo_path=sudo_path)
 
 @app.route('/luksctl_api_wn/v1.0/status', methods=['GET'])
 def get_status():

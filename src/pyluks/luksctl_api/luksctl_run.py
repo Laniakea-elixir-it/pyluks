@@ -66,6 +66,36 @@ def read_api_config(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini', api_sectio
     return config_dict
 
 
+def write_systemd_unit_file(working_directory, environment_prefix, user, group, app,
+                            service_file='/etc/systemd/system/luksctl-api.service',
+                            gunicorn_config_file='/etc/luks/gunicorn.conf.py'):
+    
+    # Exit if command is not run as root
+    if not os.geteuid() == 0:
+        sys.exit('Error: write_systemd_unit_file must be run as root.')
+    
+    config = ConfigParser()
+    config.optionxform = str
+    
+    config.add_section('Unit')
+    config['Unit']['Description'] = 'Gunicorn instance to serve luksctl api server'
+    config['Unit']['After'] = 'network.target'
+
+    config.add_section('Service')
+    config['Service']['User'] = user
+    config['Service']['Group'] = group
+    config['Service']['WorkingDirectory'] = working_directory
+    config['Service']['Environment'] = f'"PATH={environment_prefix}/bin"'
+    
+    config['Service']['ExecStart'] = f'{environment_prefix}/bin/gunicorn --config {gunicorn_config_file} app:{app}'
+    
+    config.add_section('Install')
+    config['Install']['WantedBy'] = 'multi-user.target'
+
+    with open(service_file, 'w') as sf:
+        config.write(sf)
+
+
 
 ################################################################################
 # NODES CLASSES
@@ -83,6 +113,7 @@ class master:
         self.env_path = __prefix__ if env_path == None else env_path
         self.luksctl_cmd = f'{self.env_path}/bin/luksctl'
         self.distro_id = distro.id()
+        self.app_name = 'master_app'
 
 
     def get_infrastructure_config(self): return self.infrastructure_config
@@ -118,47 +149,21 @@ class master:
             config.write(f)
 
 
-    def write_systemd_unit_file(self, working_directory, environment_prefix, ssl,
-                                user, group, CN='localhost', cert_file='/etc/luks/gunicorn-cert.pem',
-                                expiration_days=3650, key_size=4096, key_file='/etc/luks/gunicorn-key.pem',
-                                service_file='/etc/systemd/system/luksctl-api.service'):
+    def write_systemd_unit_file(self, working_directory, environment_prefix, user, group):
         
-        # Exit if command is not run as root
-        if not os.geteuid() == 0:
-            sys.exit('Error: write_systemd_unit_file must be run as root.')
-        
-        config = ConfigParser()
-        config.optionxform = str
-        
-        config.add_section('Unit')
-        config['Unit']['Description'] = 'Gunicorn instance to serve luksctl api server'
-        config['Unit']['After'] = 'network.target'
-
-        config.add_section('Service')
-        config['Service']['User'] = user
-        config['Service']['Group'] = group
-        config['Service']['WorkingDirectory'] = working_directory
-        config['Service']['Environment'] = f'"PATH={environment_prefix}/bin"'
-        
-        if ssl:
-            generate_self_signed_cert(CN=CN, cert_file=cert_file, expiration_days=expiration_days, key_size=key_size, key_file=key_file)
-            config['Service']['ExecStart'] = f'{environment_prefix}/bin/gunicorn --workers 2 --bind 0.0.0.0:5000 -m 007 --certfile={cert_file} --keyfile={key_file} app:master_app'
-        else:
-            config['Service']['ExecStart'] = f'{environment_prefix}/bin/gunicorn --workers 2 --bind 0.0.0.0:5000 -m 007 app:master_app'
-        
-        config.add_section('Install')
-        config['Install']['WantedBy'] = 'multi-user.target'
-
-        with open(service_file, 'w') as sf:
-            config.write(sf)
+        write_systemd_unit_file(working_directory=working_directory,
+                                environment_prefix=environment_prefix,
+                                user=user,
+                                group=group,
+                                app=self.app_name)
 
 
-    def write_exports_file(self, nfs_export_list=['/export']):
-        
-        with open('/etc/exports','a+') as exports_file:
-            for export_dir in nfs_export_list:
-                for node in self.node_list:
-                    exports_file.write(f'{export_dir} {node}:(rw,sync,no_root_squash)')
+    #def write_exports_file(self, nfs_export_list=['/export']):
+    #   
+    #   with open('/etc/exports','a+') as exports_file:
+    #       for export_dir in nfs_export_list:
+    #           for node in self.node_list:
+    #               exports_file.write(f'{export_dir} {node}:(rw,sync,no_root_squash)')
 
 
     def get_status(self):
@@ -269,6 +274,7 @@ class wn:
         self.nfs_mountpoint_list = nfs_mountpoint_list
         self.sudo_path = sudo_path
         self.mount_cmd = f'{self.sudo_path}/mount'
+        self.app_name = 'wn_app'
 
     
     def write_api_config(self, luks_cryptdev_file='/etc/luks/luks-cryptdev.ini'):
@@ -293,32 +299,13 @@ class wn:
             config.write(f)
 
 
-    def write_systemd_unit_file(self, working_directory, environment_prefix, user,
-                                group, service_file='/etc/systemd/system/luksctl-api.service'):
+    def write_systemd_unit_file(self, working_directory, environment_prefix, user, group):
         
-        # Exit if command is not run as root
-        if not os.geteuid() == 0:
-            sys.exit('Error: write_systemd_unit_file must be run as root.')
-        
-        config = ConfigParser()
-        config.optionxform = str
-        
-        config.add_section('Unit')
-        config['Unit']['Description'] = 'Gunicorn instance to serve luksctl api server'
-        config['Unit']['After'] = 'network.target'
-
-        config.add_section('Service')
-        config['Service']['User'] = user
-        config['Service']['Group'] = group
-        config['Service']['WorkingDirectory'] = working_directory
-        config['Service']['Environment'] = f'"PATH={environment_prefix}/bin"'
-        config['Service']['ExecStart'] = f'{environment_prefix}/bin/gunicorn --workers 2 --bind 0.0.0.0:5000 -m 007 app:wn_app'
-        
-        config.add_section('Install')
-        config['Install']['WantedBy'] = 'multi-user.target'
-
-        with open(service_file, 'w') as sf:
-            config.write(sf)
+        write_systemd_unit_file(working_directory=working_directory,
+                                environment_prefix=environment_prefix,
+                                user=user,
+                                group=group,
+                                app=self.app_name)
 
 
     def check_status(self):

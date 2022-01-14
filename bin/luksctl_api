@@ -9,6 +9,7 @@ from pyluks import __version__
 from pyluks.luksctl_api import __path__ as luksctl_api_path_list
 from pyluks.luksctl_api.luksctl_run import __prefix__ as environment_prefix
 from pyluks.luksctl_api.luksctl_run import master, wn
+from pyluks.luksctl_api.ssl_certificate import generate_self_signed_cert
 
 
 ################################################################################
@@ -33,12 +34,16 @@ def cli_options():
     master_parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin', help='PATH for the sudo command')
     master_parser.add_argument('--env-path', dest='env_path', default=None, help='Virtualenv path')
     master_parser.add_argument('--ssl', action='store_true', dest='ssl', default=False, help='Use ssl self signed certificate')
+    master_parser.add_argument('--ssl-cert-file', dest='cert_file', default='/etc/luks/gunicorn-cert.pem', help='SSL certificate file')
+    master_parser.add_argument('--ssl-key-file', dest='key_file', default='/etc/luks/gunicorn-key.pem', help='SSL key file')
+    master_parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
     master_parser.add_argument('--user', dest='user', default='luksctl_api', help='luksctl-api service user')
     master_parser.set_defaults(setup_function=master_setup)
 
     wn_parser = subparsers.add_parser('wn')
     wn_parser.add_argument('--nfs-mountpoint-list', nargs='*', dest='nfs_mountpoint_list', help='NFS mountpoint list')
     wn_parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin', help='PATH for sudo and mount command')
+    wn_parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
     wn_parser.add_argument('--user', dest='user', default='luksctl_api_wn', help='luksctl-api service user')
     wn_parser.set_defaults(setup_function=wn_setup)
 
@@ -59,22 +64,32 @@ def master_setup(options):
 
     master_node.write_api_config()
 
+    if options.ssl:
+        generate_self_signed_cert(cert_file=options.cert_file,
+                                  key_file=options.key_file)
+
+    shutil.copy(src=f'{luksctl_api_path}/gunicorn.conf.py',
+                dst=options.gunicorn_config_file)
+
     master_node.write_systemd_unit_file(working_directory=luksctl_api_path,
                                         environment_prefix=environment_prefix,
-                                        ssl=options.ssl, user=options.user,
+                                        user=options.user,
                                         group=options.user)
 
 
 def wn_setup(options):
 
-    wn_node = wn(nfs_mountpoint_list=options.nfs_mountpoint_list,
-                 sudo_path=options.sudo_path)
+    working_node = wn(nfs_mountpoint_list=options.nfs_mountpoint_list,
+                      sudo_path=options.sudo_path)
 
-    wn_node.write_api_config()
+    working_node.write_api_config()
 
-    wn_node.write_systemd_unit_file(working_directory=luksctl_api_path,
-                                    environment_prefix=environment_prefix,
-                                    user=options.user, group=options.user)
+    shutil.copy(src=f'{luksctl_api_path}/gunicorn.conf.py',
+                dst=options.gunicorn_config_file)
+
+    working_node.write_systemd_unit_file(working_directory=luksctl_api_path,
+                                         environment_prefix=environment_prefix,
+                                         user=options.user, group=options.user)
 
 
 ################################################################################

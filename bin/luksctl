@@ -37,6 +37,9 @@ def cli_options():
 
 if __name__ == '__main__':
 
+    if not os.geteuid() == 0:
+        sys.exit('[Error] Script must be run as root.')
+
     # configuration file
     luks_config_file = '/etc/luks/luks-cryptdev.ini'
 

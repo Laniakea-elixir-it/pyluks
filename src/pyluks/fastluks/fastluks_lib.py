@@ -24,9 +24,22 @@ time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 #now = datetime.now().strftime('-%b-%d-%y-%H%M%S')
 # Get Distribution
 # Ubuntu and centos currently supported
-DISTNAME = distro.id()
-if DISTNAME not in ['ubuntu','centos']:
-    raise Exception('Distribution not supported: Ubuntu and Centos currently supported')
+def check_distro(function):
+    """Decorator function to check that the wrapped function is run on Ubuntu or CentOS.
+
+    :param function: Function to be wrapped.
+    :type function: function
+    :raises Exception: Raises an exception when the wrapped function is not run on Ubuntu or CentOS
+    :return: Wrapper function
+    :rtype: function
+    """
+    global DISTNAME
+    DISTNAME = distro.id()
+    def wrapper_function(*args, **kwargs):
+        if DISTNAME not in ['ubuntu','centos']:
+            raise Exception('Distribution not supported: Ubuntu and Centos currently supported')
+        return function()
+    return wrapper_function
 
 
 
@@ -152,7 +165,7 @@ def create_random_cryptdev_name(n=8):
     return ''.join([random.choice(ascii_lowercase) for i in range(n)])
 
 
-
+@check_distro
 def install_cryptsetup(logger=None):
     """Install the cryptsetup command line tool, used to interface with dm-crypt for creating,
     accessing and managing encrypted devices. It uses either apt or yum depending on the Linux distribution.

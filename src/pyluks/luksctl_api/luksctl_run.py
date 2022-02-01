@@ -231,8 +231,7 @@ class master:
         
         * {'volume_state' : 'mounted'} if the volume is mounted.
         * {'volume_state': 'unmounted'} if the volume is unmounted.
-        * {'volume_state' : 'unavailable', 'output' : stdout, 'stderr' : stderr} if the luksctl status command
-        returns a non-recognized exit code.
+        * {'volume_state' : 'unavailable', 'output' : stdout, 'stderr' : stderr} if the luksctl status command returns a non-recognized exit code.
 
         :return: String containing the json-formatted message for the volume_state
         :rtype: str
@@ -462,8 +461,7 @@ class wn:
     def nfs_mount(self):
         """Mounts the nfs to the mountpoint specified in the wn.nfs_mountpoint_list attribute.
 
-        :return: Returns {'nfs_state':'mounted'} if the nfs is already mounted or the output of the
-        wn.get_status method if the nfs is mounted by this function.
+        :return: Returns {'nfs_state':'mounted'} if the nfs is already mounted or the output of the wn.get_status method if the nfs is mounted by this function.
         :rtype: str
         """
 

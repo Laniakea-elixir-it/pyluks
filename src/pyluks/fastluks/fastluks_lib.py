@@ -439,6 +439,7 @@ class device:
         * Sets up a the device in LUKS encryption mode with the device.luksFormat method
         * Stores the passphrase to HashiCorp Vault if `use_vault` is set to True with the write_secret_to_vault function.
         * Stores the header backup with the device.luksHeaderBackup method
+
         It either returns the passphrase if the setup is successful or False if it fails.
 
         :param luks_header_backup_dir: Directory for the header and keyslot area backup.
@@ -765,6 +766,7 @@ def encrypt_and_setup(device_name='/dev/vdb', cryptdev='crypt', mountpoint='/exp
     * Encrypts the device with the device.encrypt method.
     * Defines the default LOCKFILE and SUCCESS_FILE variables for volume setup.
     * Sets up the volume with the device.volume_setup method.
+    
     This function is used by the fastluks script in order to encrypt and setup a device directly from the command line.
 
     :param device_name: Name of the device, defaults to '/dev/vdb'

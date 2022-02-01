@@ -6,7 +6,7 @@ import logging
 from configparser import ConfigParser
 
 # Import internal dependencies
-from .luksctl_run import read_api_config, master, api_logger
+from .luksctl_run import master, api_logger
 
 
 
@@ -15,26 +15,20 @@ from .luksctl_run import read_api_config, master, api_logger
 
 app = Flask(__name__)
 
-api_configs = read_api_config()
-infrastructure_config = api_configs['infrastructure_config']
-virtualization_type = api_configs['virtualization_type']
-node_list = api_configs['node_list']
-sudo_path = api_configs['sudo_path']
-env_path = api_configs['env_path']
+def instantiate_master_node():
+    """Instantiate the master_node object needed by the API functions.
 
-# Define master node instance
-master_node = master(infrastructure_config=infrastructure_config,
-                     virtualization_type=virtualization_type,
-                     node_list=node_list,
-                     sudo_path=sudo_path,
-                     env_path=env_path)
+    :return: A master object which attributes are retrieved from the cryptdev .ini file.
+    :rtype: pyluks.luksctl_api.luksctl_run.master
+    """
+    master_node = master(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini', api_section='luksctl_api')
+    return master_node
 
 
 
 ################################################################################
 # FUNCTIONS
 
-#______________________________________
 @app.route('/luksctl_api/v1.0/status', methods=['GET'])
 def get_status():
     """Runs the master.get_status method on a GET request.
@@ -42,11 +36,12 @@ def get_status():
     :return: Output from the master.get_status method.
     :rtype: str
     """
+
+    master_node = instantiate_master_node()
     
     return master_node.get_status()
 
 
-#______________________________________
 @app.route('/luksctl_api/v1.0/open', methods=['POST'])
 def luksopen():
     """Runs the master.open method on a POST request containing the HashiCorp Vault informations to retrieve
@@ -55,6 +50,8 @@ def luksopen():
     :return: Output from the master.open method.
     :rtype: str
     """
+
+    master_node = instantiate_master_node()
 
     if not request.json or \
        not 'vault_url' in request.json or \

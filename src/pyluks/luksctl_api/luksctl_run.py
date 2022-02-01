@@ -32,13 +32,13 @@ api_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
 ################################################################################
 # FUNCTIONS
 
-def read_api_config(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini', api_section='luksctl_api'):
+def read_api_config(luks_cryptdev_file, api_section):
     """Reads the api configurations from the cryptdev .ini file.
 
-    :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to '/etc/luks/luks-cryptdev.ini'
-    :type luks_cryptdev_file: str, optional
-    :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
-    :type api_section: str, optional
+    :param luks_cryptdev_file: Path to the cryptdev .ini file
+    :type luks_cryptdev_file: str
+    :param api_section: API section as defined in the cryptdev .ini file
+    :type api_section: str
     :raises FileNotFoundError: Raises an error if the cryptdev .ini file is not found.
     :return: Returns a dictionary containing key, value pairs for each API configuration option, i.e. infrastructure_configuration, virtualization_type, wn_ips, sudo_path and env_path
     :rtype: dict
@@ -133,11 +133,13 @@ class master:
     """
 
 
-    def __init__(self, infrastructure_config, virtualization_type=None, node_list=None, sudo_path='/usr/bin', env_path=None):
-        """Instantiates the master class.
+    def __init__(self, infrastructure_config=None, virtualization_type=None, node_list=None, sudo_path='/usr/bin', env_path=None,
+                 luks_cryptdev_file=None, api_section='luksctl_api'):
+        """Instantiates the master class. If luks_cryptdev_file (and eventually also api_section) is defined, other arguments will be ignored and
+        the object's attributes are read from the cryptdev .ini file.
 
-        :param infrastructure_config: Infrastructure configuration, possible values are 'single_vm' or 'cluster'.
-        :type infrastructure_config: str
+        :param infrastructure_config: Infrastructure configuration, possible values are 'single_vm' or 'cluster', defaults to None
+        :type infrastructure_config: str, optional
         :param virtualization_type: Virtualization type, either None or 'docker', defaults to None
         :type virtualization_type: str, optional
         :param node_list: List of nodes IPs in the cluster, defaults to None
@@ -146,14 +148,27 @@ class master:
         :type sudo_path: str, optional
         :param env_path: Path to the virtual environment in which pyluks is installed, defaults to None
         :type env_path: str, optional
+        :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to None
+        :type luks_cryptdev_file: str, optional
+        :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
+        :type api_section: str, optional
         """
+        if luks_cryptdev_file is not None:
+            api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
+            self.infrastructure_config = api_configs['infrastructure_config']
+            self.virtualization_type = api_configs['virtualization_type']
+            self.node_list = api_configs['node_list']
+            self.sudo_path = api_configs['sudo_path']
+            self.env_path = api_configs['env_path']
 
-        self.infrastructure_config = infrastructure_config
-        self.virtualization_type = virtualization_type
-        self.node_list = node_list
-        self.sudo_path = sudo_path
+        else:
+            self.infrastructure_config = infrastructure_config
+            self.virtualization_type = virtualization_type
+            self.node_list = node_list
+            self.sudo_path = sudo_path
+            self.env_path = __prefix__ if env_path == None else env_path
+        
         self.sudo_cmd = f'{self.sudo_path}/sudo'
-        self.env_path = __prefix__ if env_path == None else env_path
         self.luksctl_cmd = f'{self.env_path}/bin/luksctl'
         self.distro_id = distro.id()
         self.app_name = 'master_app'
@@ -364,17 +379,28 @@ class wn:
     """
 
 
-    def __init__(self, nfs_mountpoint_list, sudo_path='/usr/bin'):
-        """Instantiates a wn object.
+    def __init__(self, nfs_mountpoint_list=None, sudo_path='/usr/bin', luks_cryptdev_file=None, api_section='luksctl_api'):
+        """Instantiates a wn object. If luks_cryptdev_file (and eventually also api_section) is defined, other arguments will be ignored and
+        the object's attributes are read from the cryptdev .ini file.
 
         :param nfs_mountpoint_list: List containing the mountpoint(s) in which the nfs is mounted.
         :type nfs_mountpoint_list: list
         :param sudo_path: Path to the sudo command, defaults to '/usr/bin'
         :type sudo_path: str, optional
+        :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to None
+        :type luks_cryptdev_file: str, optional
+        :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
+        :type api_section: str, optional
         """
-
-        self.nfs_mountpoint_list = nfs_mountpoint_list
-        self.sudo_path = sudo_path
+        if luks_cryptdev_file is not None:
+            api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
+            self.nfs_mountpoint_list = api_configs['nfs_mountpoint_list']
+            self.sudo_path = api_configs['sudo_path']
+        
+        else:
+            self.nfs_mountpoint_list = nfs_mountpoint_list
+            self.sudo_path = sudo_path
+        
         self.mount_cmd = f'{self.sudo_path}/mount'
         self.app_name = 'wn_app'
 

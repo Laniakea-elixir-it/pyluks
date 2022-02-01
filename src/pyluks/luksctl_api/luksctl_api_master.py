@@ -37,6 +37,11 @@ master_node = master(infrastructure_config=infrastructure_config,
 #______________________________________
 @app.route('/luksctl_api/v1.0/status', methods=['GET'])
 def get_status():
+    """Runs the master.get_status method on a GET request.
+
+    :return: Output from the master.get_status method.
+    :rtype: str
+    """
     
     return master_node.get_status()
 
@@ -44,6 +49,12 @@ def get_status():
 #______________________________________
 @app.route('/luksctl_api/v1.0/open', methods=['POST'])
 def luksopen():
+    """Runs the master.open method on a POST request containing the HashiCorp Vault informations to retrieve
+    the passphrase.
+
+    :return: Output from the master.open method.
+    :rtype: str
+    """
 
     if not request.json or \
        not 'vault_url' in request.json or \

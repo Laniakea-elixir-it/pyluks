@@ -4,7 +4,19 @@ import hvac
 
 #____________________________________
 def write_secret_to_vault(vault_url, wrapping_token, secret_path, key, value):
+    """Writes the passhprase to HashiCorp Vault.
 
+    :param vault_url: URL to Vault server
+    :type vault_url: str
+    :param wrapping_token: Wrapping token used to write the passphrase to Vault.
+    :type wrapping_token: str
+    :param secret_path: Vault path in which the passphrase is stored.
+    :type secret_path: str
+    :param key: Vault key associated to the passphrase
+    :type key: str
+    :param value: Passphrase to be stored in Vault
+    :type value: str
+    """
     # Instantiate the hvac.Client class
     vault_client = hvac.Client(vault_url, verify=False)
 
@@ -22,6 +34,21 @@ def write_secret_to_vault(vault_url, wrapping_token, secret_path, key, value):
 
 #____________________________________
 def read_secret(vault_url, wrapping_token, secret_root, secret_path, secret_key):
+    """Read the passphrase from HashiCorp Vault.
+
+    :param vault_url: URL to Vault server
+    :type vault_url: str
+    :param wrapping_token: Wrapping token used to write the passphrase to Vault.
+    :type wrapping_token: str
+    :param secret_root: Vault root in which secrets are stored, e.g. 'secrets'
+    :type secret_root: str
+    :param secret_path: Vault path in which the passphrase is stored.
+    :type secret_path: str
+    :param secret_key: Vault key associated to the passphrase.
+    :type user_key: str
+    :return: Passphrase retrieved from Vault.
+    :rtype: str
+    """
     
     # Instantiate the hvac.Client class
     vault_client = hvac.Client(vault_url, verify=False)

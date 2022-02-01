@@ -23,9 +23,17 @@ luksctl_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
 # LUKSCtl class
 
 class LUKSCtl:
+    """Class that provides functions to manage a LUKS encrypted device. It reads the encrypted device information
+    from the cryptdev .ini file.
+    """
 
 
     def __init__(self, config_file):
+        """Instantiate a LUKSCtl object.
+
+        :param config_file: Path to the cryptdev .ini file.
+        :type config_file: str
+        """
 
         self.config_file = config_file
 
@@ -67,12 +75,20 @@ class LUKSCtl:
 
 
     def dmsetup_info(self):
+        """Runs the command 'dmsetup info' on the cryptdevice.
+
+        :return: Returns the command exit code.
+        :rtype: int
+        """
 
         _, _, status = run_command(f'dmsetup info /dev/mapper/{self.cryptdev}')
         return status
   
 
     def display_dmsetup_info(self):
+        """Displays the cryptdevice status. It prints the device information, followed by 'Encrypted volume: [ OK ]'
+        if the device is correctly setup and open, otherwise it prints 'Encrypted volume: [ FAIL ]'.
+        """
 
         stdOutValue, stdErrValue, status = run_command(f'dmsetup info /dev/mapper/{self.cryptdev}')
 
@@ -87,6 +103,9 @@ class LUKSCtl:
     
 
     def luksopen_device(self):
+        """Opens the cryptdevice, mounts it and call the LUKSCtl.display_dmsetup_info method. It prints
+        'Encrypted volume mount: [ FAIL ]' if the mount command returns an error.
+        """
 
         run_command(f'cryptsetup luksOpen /dev/disk/by-uuid/{self.uuid} {self.cryptdev}')
     
@@ -100,6 +119,10 @@ class LUKSCtl:
     
 
     def luksclose_device(self):
+        """Unmounts, closes the cryptdevice and calls the LUKSCtl.dmsetup_info method. It prints
+        'Encrypted volume umount: [ OK ]' if the cryptdevice is correctly closed, 'Encrypted volume umount [ FAIL ]'
+        otherwise.
+        """
 
         run_command(f'umount {self.mountpoint}') # Unmount device
 

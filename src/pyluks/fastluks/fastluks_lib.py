@@ -20,7 +20,6 @@ from ..vault_support import write_secret_to_vault
 # VARIABLES
 
 alphanum = ascii_letters + digits
-time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 #now = datetime.now().strftime('-%b-%d-%y-%H%M%S')
 # Get Distribution
 # Ubuntu and centos currently supported
@@ -79,6 +78,7 @@ def echo(loglevel, text):
     :rtype: str
     """
     check_loglevel(loglevel)
+    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     message = f'{loglevel} {time} {text}\n'
     print(message)
     return message

@@ -24,12 +24,13 @@ Installation
 ------------
 pyluks can be installed using pip. In order to avoid problems when installing ``cryptography``, one of pyluks dependencies, pip needs to be updated. It's recommended to install the package in a virtual environment:
 
-.. code-block:: bash 
+.. code-block:: console 
 
-   python3 -m virtualenv pyluks_venv
-   source pyluks_venv/bin/activate
-   pip install --upgrade pip
-   pip install pyluks
+   $ python3 -m pip install virtualenv
+   $ python3 -m virtualenv pyluks_venv
+   $ source pyluks_venv/bin/activate
+   $ pip install --upgrade pip
+   $ pip install pyluks
 
 
 .. toctree::
@@ -37,6 +38,7 @@ pyluks can be installed using pip. In order to avoid problems when installing ``
    :caption: Contents:
  
    fastluks
+   fastluks_bin
    modules
 
 Indices and tables

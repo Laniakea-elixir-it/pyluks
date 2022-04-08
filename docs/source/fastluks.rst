@@ -1,3 +1,5 @@
+.. _fastluks:
+
 =====================================
 fastluks: volume encryption and setup
 =====================================
@@ -27,7 +29,7 @@ To install these two dependencies open a Python command prompt:
    For most operations related to device encryption, root privileges are required.
    Open the Python command prompt as root user:
    
-   .. code-block:: bash
+   .. code-block:: console
       
       [user@vm ~]$ sudo su -
       [root@vm ~]$ . /path/to/pyluks_venv/bin/activate
@@ -139,3 +141,20 @@ After encryption, the unlocked volume can be formatted and mounted to read and w
    >>> my_device.mount_vol() # mount volume
    INFO 2022-03-30 09:29:25 Mounting encrypted device.
 
+
+-------------
+Header backup
+-------------
+Since lost of a LUKS encrypted partition header results in not being able to decrypt data, it is usually a good
+practice to backup the header on another disk. Header backup can be done with the ``luksHeaderBackup()`` function.
+Make sure that ``luks_header_backup_dir`` exists before running this command:
+
+.. code-block:: python
+
+   >>> import os
+   >>> os.mkdir('/etc/luks')
+   >>> my_device.luksHeaderBackup(luks_header_backup_dir='/etc/luks', luks_header_backup_file='luks-header.bck')
+
+
+The procedure described here can be replicated with the command line script **fastluks**, which uses the functions
+in this subpackage to encrypt and setup a volume.

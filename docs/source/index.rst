@@ -39,6 +39,9 @@ pyluks can be installed using pip. In order to avoid problems when installing ``
  
    fastluks
    fastluks_bin
+   cryptdev_file
+   luksctl
+   luksctl_api
    modules
 
 Indices and tables

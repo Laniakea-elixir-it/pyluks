@@ -1,7 +1,7 @@
 .. _fastluks_bin:
 
 ===============
-fastluks script
+FastLUKS script
 ===============
 
 The ``fastluks`` script allows to perform volume encryption and setup directly from the command line, using the
@@ -83,6 +83,10 @@ passed to the ``fastluks`` script:
 * To store the passphrase locally in plaintext, the ``--save-passphrase-locally`` flag is used.
 * To store the passphrase on an existing Vault instance, the ``--vault`` flag is used in conjuction with the Vault-related
   arguments, ``--vault-url``, ``--wrapping-token``, ``--secret-path`` and ``--user-key``.
+
+.. note::
+
+   The script requires superuser rights.
 
 
 Saving the passphrase locally

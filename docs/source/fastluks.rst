@@ -1,7 +1,7 @@
 .. _fastluks:
 
 =====================================
-fastluks: volume encryption and setup
+FastLUKS: volume encryption and setup
 =====================================
 
 The fastluks subpackage provides basic functionalities to set up and encrypt a volume device. These functions are provided through the device class.
@@ -40,13 +40,11 @@ To install these two dependencies open a Python command prompt:
 
    >>> from pyluks import fastluks
    >>> fastluks.check_cryptsetup()
-   INFO 2022-03-30 09:29:25 Check if the required applications are installed...
-
-   INFO 2022-03-30 09:29:25 cryptsetup is not installed. Installing...
-
-   INFO 2022-03-30 09:29:25 Distribution: CentOS. Using yum.
-
-   INFO 2022-03-30 09:29:25 cryptsetup installed.
+   INFO 2022-04-12 15:08:47 Check if the required applications are installed...
+   INFO 2022-04-12 15:08:47 dmsetup is already installed.
+   INFO 2022-04-12 15:08:47 cryptsetup is not installed. Installing...
+   INFO 2022-04-12 15:08:47 Distribution: CentOS. Using yum.
+   INFO 2022-04-12 15:08:50 cryptsetup installed.
 
 
 -----------------
@@ -99,7 +97,7 @@ Once encrypted, the device can be unlocked, mapping the LUKS partition to a new 
 .. code-block:: python
 
    >>> my_device.open_device(secret)
-   INFO 2022-03-30 09:29:25 Open LUKS volume
+   INFO 2022-04-12 15:13:55 Open LUKS volume
 
 A final check can be done on the unlocked device.
 
@@ -136,10 +134,10 @@ After encryption, the unlocked volume can be formatted and mounted to read and w
 .. code-block:: python
 
    >>> my_device.create_fs() # create filesystem
-   INFO 2022-03-30 09:29:25 Creating filesystem.
+   INFO 2022-04-12 15:15:26 Creating filesystem.
 
    >>> my_device.mount_vol() # mount volume
-   INFO 2022-03-30 09:29:25 Mounting encrypted device.
+   INFO 2022-04-12 15:15:51 Mounting encrypted device.
 
 
 -------------

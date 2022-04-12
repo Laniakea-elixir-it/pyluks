@@ -79,7 +79,7 @@ def echo(loglevel, text):
     """
     check_loglevel(loglevel)
     time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    message = f'{loglevel} {time} {text}\n'
+    message = f'{loglevel} {time} {text}'
     print(message)
     return message
 
@@ -194,12 +194,16 @@ def check_cryptsetup():
             run_command('apt-get install -y dmsetup')
         else:
             run_command('yum install -y device-mapper')
+    else:
+        echo('INFO', 'dmsetup is already installed.')
     
     _, _, cryptsetup_status = run_command('type -P cryptsetup &>/dev/null')
     if cryptsetup_status != 0:
         echo('INFO', 'cryptsetup is not installed. Installing...')
         install_cryptsetup(logger=fastluks_logger)
         echo('INFO', 'cryptsetup installed.')
+    else:
+        echo('INFO', 'cryptsetup is already installed.')
 
 
 def create_random_secret(passphrase_length):
@@ -568,6 +572,7 @@ class device:
         :type s3cret: str
         """
         luksUUID, _, _ = run_command(f'cryptsetup luksUUID {self.device_name}')
+        luksUUID = luksUUID.rstrip()
 
         with open(luks_cryptdev_file, 'w') as f:
             config = ConfigParser()

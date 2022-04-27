@@ -4,8 +4,8 @@
 FastLUKS: volume encryption and setup
 =====================================
 
-The fastluks subpackage provides basic functionalities to set up and encrypt a volume device. These functions are provided through the device class.
-An object of this class can be instantiated by defining four attributes:
+The fastluks subpackage provides basic functionalities to set up and encrypt a volume device. These functions are
+provided through the **device** class. An object of this class can be instantiated by defining four attributes:
 
 * **device_name**: the name of the volume to be encrypted.
 * **cryptdev**: the name of the cryptdevice which is mapped to the device itself once it's encrypted.
@@ -22,11 +22,11 @@ To install these two dependencies open a Python command prompt:
 
 .. warning::
 
-   Currently, pyluks supports CentOS and Ubuntu and has been tested on CentOS7, Ubuntu 18.04 and Ubuntu 20.04.
+   Currently, pyluks is supported on CentOS and Ubuntu and has been tested on CentOS7, Ubuntu 18.04 and Ubuntu 20.04.
 
 .. note::
 
-   For most operations related to device encryption, root privileges are required.
+   For most operations related to device encryption, superuser rights are required.
    Open the Python command prompt as root user:
    
    .. code-block:: console

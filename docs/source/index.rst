@@ -26,11 +26,11 @@ pyluks can be installed using pip. In order to avoid problems when installing ``
 
 .. code-block:: console 
 
-   $ python3 -m pip install virtualenv
-   $ python3 -m virtualenv pyluks_venv
-   $ source pyluks_venv/bin/activate
-   $ pip install --upgrade pip
-   $ pip install pyluks
+   [root@vm ~]# python3 -m pip install virtualenv
+   [root@vm ~]# python3 -m virtualenv pyluks_venv
+   [root@vm ~]# source pyluks_venv/bin/activate
+   (pyluks_venv) [root@vm ~]# pip install --upgrade pip
+   (pyluks_venv) [root@vm ~]# pip install pyluks
 
 
 .. toctree::

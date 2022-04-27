@@ -55,7 +55,7 @@ The arguments that can be passed to the script can be seen with ``fastluks -h``:
 ``--vault-url``               Vault instance URL                                                None
 ``--wrapping-token``          Wrapping token to write the secret to Vault                       None
 ``--secret-path``             Path were the secret is stored in Vault                           None
-``--user-key``                Vault user key                                                    None
+``--user-key``                Vault secret key                                                  None
 ``-V``                        Return fastluks version                                           //
 ============================= ================================================================= ===========================
 
@@ -171,7 +171,28 @@ In this case, the ``fastluks`` script must be run with the ``--vault`` flag and 
   └─vda1 253:1    0  20G  0 part /
   vdb    253:16   0   1G  0 disk
 
-  (pyluks) [root@vm ~]# fastluks --device --vault --vault-url http://vault_instance_url/ --wrapping-token wrapping-token-string --secret-path /path/to/secret --user-key user-key
+  (pyluks) [root@vm ~]# fastluks --device --vault --vault-url http://vault_instance_url/ --wrapping-token wrapping_token_string --secret-path /path/to/secret --user-key secret_key
+  INFO 2022-04-13 12:35:45 Check if the required applications are installed...
+  INFO 2022-04-13 12:35:45 dmsetup is already installed.
+  INFO 2022-04-13 12:35:45 cryptsetup is not installed. Installing...
+  INFO 2022-04-13 12:35:45 Distribution: CentOS. Using yum.
+  INFO 2022-04-13 12:35:48 cryptsetup installed.
+  INFO 2022-04-13 12:35:49 Start the encryption procedure.
+  DEBUG 2022-04-13 12:35:49 LUKS header information for /dev/vdb
+  DEBUG 2022-04-13 12:35:49 Cipher algorithm: aes-xts-plain64
+  DEBUG 2022-04-13 12:35:49 Hash algorithm sha256
+  DEBUG 2022-04-13 12:35:49 Keysize: 256
+  DEBUG 2022-04-13 12:35:49 Device: /dev/vdb
+  DEBUG 2022-04-13 12:35:49 Crypt device: crypt
+  DEBUG 2022-04-13 12:35:49 Mapper: /dev/mapper/crypt
+  DEBUG 2022-04-13 12:35:49 Mountpoint: /export
+  DEBUG 2022-04-13 12:35:49 File system: ext4
+  INFO 2022-04-13 12:35:54 Passphrase stored in Vault
+  INFO 2022-04-13 12:35:54 Open LUKS volume
+  INFO 2022-04-13 12:35:57 Device informations have been saved in /etc/luks/luks-cryptdev.ini
+  INFO 2022-04-13 12:35:57 SUCCESSFUL.
+  INFO 2022-04-13 12:35:57 Creating filesystem.
+  INFO 2022-04-13 12:35:57 Mounting encrypted device.
 
   (pyluks) [root@vm ~]# lsblk
   NAME    MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINT

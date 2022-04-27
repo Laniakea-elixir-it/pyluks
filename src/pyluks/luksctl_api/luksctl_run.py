@@ -233,12 +233,12 @@ class master:
                                 app=self.app_name)
 
 
-    #def write_exports_file(self, nfs_export_list=['/export']):
-    #   
-    #   with open('/etc/exports','a+') as exports_file:
-    #       for export_dir in nfs_export_list:
-    #           for node in self.node_list:
-    #               exports_file.write(f'{export_dir} {node}:(rw,sync,no_root_squash)')
+    def write_exports_file(self, nfs_export_list=['/export']):
+       
+       with open('/etc/exports','a+') as exports_file:
+           for export_dir in nfs_export_list:
+               for node in self.node_list:
+                   exports_file.write(f'{export_dir} {node}:(rw,sync,no_root_squash)')
 
 
     def get_status(self):
@@ -310,10 +310,6 @@ class master:
             api_logger.debug(f'Volume status: {status}')
 
             if str(status) == '0':
-                if self.infrastructure_config == 'cluster':
-                    self.nfs_restart()
-                elif self.virtualization_type == 'docker':
-                    self.docker_restart
                 return json.dumps({'volume_state': 'mounted' })
 
             elif str(status)  == '1':
@@ -321,190 +317,3 @@ class master:
 
             else:
                 return json.dumps({'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr})
-
-
-    def nfs_restart(self):
-        """Restarts the nfs service and calls the master.mount_nfs_on_wns method.
-        """
-
-        api_logger.debug(f'Restarting NFS on: {self.distro_id}')
-        
-        if self.distro_id == 'centos':
-            restart_command = f'{self.sudo_cmd} systemctl restart nfs-server'
-        elif self.distro_id == 'ubuntu':
-            restart_command = f'{self.sudo_cmd} systemctl restart nfs-kernel-server'
-        else:
-            restart_command = ''
-        
-        api_logger.debug(restart_command)
-
-        stdout, stderr, status = run_command(restart_command)
-
-        api_logger.debug(f'NFS status: {status}')
-        api_logger.debug(f'NFS status stdout: {stdout}')
-        api_logger.debug(f'NFS status stderr: {stderr}')
-
-        if str(status) == '0':
-            self.mount_nfs_on_wns()
-
-
-    def mount_nfs_on_wns(self):
-        """Sends a POST request to make the nodes in the cluster mount the nfs.
-        """
-
-        for node in self.node_list:
-            url = f'http://{node}:5000/luksctl_api_wn/v1.0/nfs-mount'
-            response = requests.post(url, verify=False)
-            response.raise_for_status()
-            deserialized_response = json.loads(response.text)
-            api_logger.debug(f'{node} NFS: {deserialized_response["nfs_state"]}')
-
-
-    def docker_restart(self):
-        """Restarts the docker service.
-        """
-
-        restart_command = f'{self.sudo_cmd} systemctl restart docker'
-
-        stdout, stderr, status = run_command(restart_command)
-
-        api_logger.debug(f'Docker service status: {status}')
-        api_logger.debug(f'Docker service stdout: {stdout}')
-        api_logger.debug(f'Docker service stderr: {stderr}')
-
-
-
-class wn:
-    """Worker node class, used to manage the luksctl API on a worker node in a cluster.
-    """
-
-
-    def __init__(self, nfs_mountpoint_list=None, sudo_path='/usr/bin', luks_cryptdev_file=None, api_section='luksctl_api'):
-        """Instantiates a wn object. If luks_cryptdev_file (and eventually also api_section) is defined, other arguments will be ignored and
-        the object's attributes are read from the cryptdev .ini file.
-
-        :param nfs_mountpoint_list: List containing the mountpoint(s) in which the nfs is mounted.
-        :type nfs_mountpoint_list: list
-        :param sudo_path: Path to the sudo command, defaults to '/usr/bin'
-        :type sudo_path: str, optional
-        :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to None
-        :type luks_cryptdev_file: str, optional
-        :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
-        :type api_section: str, optional
-        """
-        if luks_cryptdev_file is not None:
-            api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
-            self.nfs_mountpoint_list = api_configs['nfs_mountpoint_list']
-            self.sudo_path = api_configs['sudo_path']
-        
-        else:
-            self.nfs_mountpoint_list = nfs_mountpoint_list
-            self.sudo_path = sudo_path
-        
-        self.mount_cmd = f'{self.sudo_path}/mount'
-        self.app_name = 'wn_app'
-
-    
-    def write_api_config(self, luks_cryptdev_file='/etc/luks/luks-cryptdev.ini'):
-        """Writes the API configuration to the cryptdev .ini file in the luksctl_api section.
-
-        :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to '/etc/luks/luks-cryptdev.ini'
-        :type luks_cryptdev_file: str, optional
-        """
-        luks_dir = os.path.dirname(luks_cryptdev_file)
-        if not os.path.exists(luks_dir):
-            os.mkdir(luks_dir)
-
-        config = ConfigParser()
-        config.read(luks_cryptdev_file)
-        # Remove luksctl_api section if written previously
-        if 'luksctl_api' in config.sections():
-            config.remove_section('luksctl_api')
-
-        config.add_section('luksctl_api')
-        api_config = config['luksctl_api']
-
-        api_config['nfs_mountpoint_list'] = json.dumps(self.nfs_mountpoint_list)
-        api_config['sudo_path'] = self.sudo_path
-
-        with open(luks_cryptdev_file, 'w') as f:
-            config.write(f)
-
-
-    def write_systemd_unit_file(self, working_directory, environment_prefix, user, group):
-        """Writes the unit file used by systemd that defines the luksctl-api service. It wraps the general
-        write_systemd_unit_file function.
-
-        :param working_directory: Path to the luksctl_api subpackage
-        :type working_directory: str
-        :param environment_prefix: Path to the virtual environment in which pyluks is installed.
-        :type environment_prefix: str
-        :param user: User under which the luksctl-api service is run.
-        :type user: str
-        :param group: User group under which the luksctl-api service is run.
-        :type group: str
-        """
-        
-        write_systemd_unit_file(working_directory=working_directory,
-                                environment_prefix=environment_prefix,
-                                user=user,
-                                group=group,
-                                app=self.app_name)
-
-
-    def check_status(self):
-        """Checks that the path(s) in the wn.nfs_mountpoint_list are mountpoints.
-
-        :return: Returns True if all the paths are mountpoints, False otherwise.
-        :rtype: bool
-        """
-
-        for mountpoint in self.nfs_mountpoint_list:
-            api_logger.debug(f'{mountpoint}: {os.path.ismount(mountpoint)}')
-            if not os.path.ismount(mountpoint):
-                return False
-        
-        return True
-
-
-    def get_status(self):
-        """Gets the nfs status, returns a json-formatted string with the following structure:
-        
-        * {'nfs_state':'mounted'} if the nfs is mounted.
-        * {'nfs_state':'unmounted'} if the nfs is not mounted.
-
-        :return: String containing the json-formatted message for the volume_state
-        :rtype: str
-        """
-
-        api_logger.debug(self.nfs_mountpoint_list)
-        if self.check_status():
-            return json.dumps({'nfs_state':'mounted'})
-        else:
-            return json.dumps({'nfs_state':'unmounted'})
-
-
-    def nfs_mount(self):
-        """Mounts the nfs to the mountpoint specified in the wn.nfs_mountpoint_list attribute.
-
-        :return: Returns {'nfs_state':'mounted'} if the nfs is already mounted or the output of the wn.get_status method if the nfs is mounted by this function.
-        :rtype: str
-        """
-
-        #sudo = which('sudo')
-        #mount = which('mount')
-
-        if self.check_status():
-            return json.dumps({'nfs_state':'mounted'})
-        
-        for mountpoint in self.nfs_mountpoint_list:
-            #mount_command = f'{sudo} mount -a -t nfs'
-            mount_command = f'{self.mount_cmd} {mountpoint}'
-            api_logger.debug(mount_command)
-            stdout, stderr, status = run_command(mount_command)
-
-            api_logger.debug(f'NFS mount subprocess call status: {status}')
-            api_logger.debug(f'NFS mount subprocess call stdout: {stdout}')
-            api_logger.debug(f'NFS mount subprocess call stderr: {stderr}')
-
-        return self.get_status()

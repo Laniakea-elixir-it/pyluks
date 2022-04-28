@@ -310,6 +310,8 @@ class master:
             api_logger.debug(f'Volume status: {status}')
 
             if str(status) == '0':
+                if self.infrastructure_config == 'cluster':
+                    self.nfs_restart()
                 return json.dumps({'volume_state': 'mounted' })
 
             elif str(status)  == '1':
@@ -317,3 +319,24 @@ class master:
 
             else:
                 return json.dumps({'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr})
+
+    def nfs_restart(self):
+        """Restarts the nfs service and calls the master.mount_nfs_on_wns method.
+        """
+
+        api_logger.debug(f'Restarting NFS on: {self.distro_id}')
+        
+        if self.distro_id == 'centos':
+            restart_command = f'{self.sudo_cmd} systemctl restart nfs-server'
+        elif self.distro_id == 'ubuntu':
+            restart_command = f'{self.sudo_cmd} systemctl restart nfs-kernel-server'
+        else:
+            restart_command = ''
+        
+        api_logger.debug(restart_command)
+
+        stdout, stderr, status = run_command(restart_command)
+
+        api_logger.debug(f'NFS status: {status}')
+        api_logger.debug(f'NFS status stdout: {stdout}')
+        api_logger.debug(f'NFS status stderr: {stderr}')

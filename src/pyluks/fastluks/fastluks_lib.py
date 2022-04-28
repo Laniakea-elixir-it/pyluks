@@ -258,39 +258,6 @@ def read_ini_file(cryptdev_ini_file):
     return {key:luks_section[key] for key in luks_section}
 
 
-def check_passphrase(passphrase_length, passphrase, passphrase_confirmation):
-    """Checks that the information provided in the device.setup_device() method is adequate to setup
-    the device.
-    If only the passphrase length is specified, a new passphrase of the corresponding length is generated.
-    Otherwise, passphrase and passphrase_confirmation need to be set to the same value and the specified
-    passphrase is returned.
-
-    :param passphrase_length: Length of the passphrase to be generated.
-    :type passphrase_length: int
-    :param passphrase: Specified passphrase to be used for device encryption.
-    :type passphrase: str
-    :param passphrase_confirmation: Passphrase confirmation, needs to be the same as 'passphrase'
-    :type passphrase_confirmation: str
-    :return: Generated or specified passphrase
-    :rtype: str
-    """
-    if passphrase_length == None:
-        if passphrase == None:
-            echo('ERROR', "Missing passphrase!")
-            return False
-        if passphrase_confirmation == None:
-            echo('ERROR', 'Missing confirmation passphrase!')
-            return False
-        if passphrase == passphrase_confirmation:
-            s3cret = passphrase
-        else:
-            echo('ERROR', 'No matching passphrases!')
-            return False
-    else:
-            s3cret = create_random_secret(passphrase_length)
-            return s3cret
-
-
 
 ################################################################################
 # DEVICE CLASSE
@@ -435,11 +402,11 @@ class device:
 
 
     def setup_device(self, luks_header_backup_dir, luks_header_backup_file, cipher_algorithm, keysize, hash_algorithm,
-                    passphrase_length, passphrase, passphrase_confirmation, use_vault, vault_url, wrapping_token, secret_path, user_key):
+                    passphrase_length, passphrase, use_vault, vault_url, wrapping_token, secret_path, user_key):
         """Performs the setup wrokflow to encrypt the device by performing the following steps:
 
         * Logs to stdout device informations and cryptographic options with the device.info method
-        * Checks the specified passphrase or creates a new one of the specified length with the check_passphrase function
+        * Checks the specified passphrase or creates a new one of the specified length
         * Sets up a the device in LUKS encryption mode with the device.luksFormat method
         * Stores the passphrase to HashiCorp Vault if `use_vault` is set to True with the write_secret_to_vault function.
         * Stores the header backup with the device.luksHeaderBackup method
@@ -460,8 +427,6 @@ class device:
         :type passphrase_length: int
         :param passphrase: Specified passphrase to be used for device encryption.
         :type passphrase: str
-        :param passphrase_confirmation: Passphrase confirmation, needs to be the same as 'passphrase'.
-        :type passphrase_confirmation: str
         :param use_vault: If set to True, the passphrase is stored to HashiCorp Vault.
         :type use_vault: bool
         :param vault_url: URL of Vault server. 
@@ -482,9 +447,13 @@ class device:
         fastluks_logger.debug('Cryptsetup full command:')
         fastluks_logger.debug(f'cryptsetup -v --cipher {cipher_algorithm} --key-size {keysize} --hash {hash_algorithm} --iter-time 2000 --use-urandom --verify-passphrase luksFormat {device} --batch-mode')
 
-        s3cret = check_passphrase(passphrase_length, passphrase, passphrase_confirmation)
-        if s3cret == False:
-            return False # unlock and exit
+        if passphrase_length == None:
+            if passphrase == None:
+                echo('ERROR', "Missing passphrase!")
+                return False # unlock and exit
+            s3cret = passphrase
+        else:
+            s3cret = create_random_secret(passphrase_length)
         
         # Start encryption procedure
         self.luksFormat(s3cret, cipher_algorithm, keysize, hash_algorithm)
@@ -645,8 +614,8 @@ class device:
 
 
     def encrypt(self, cipher_algorithm, keysize, hash_algorithm, luks_header_backup_dir, luks_header_backup_file, 
-               LOCKFILE, SUCCESS_FILE, luks_cryptdev_file, passphrase_length, passphrase, passphrase_confirmation,
-               save_passphrase_locally, use_vault, vault_url, wrapping_token, secret_path, user_key):
+               LOCKFILE, SUCCESS_FILE, luks_cryptdev_file, passphrase_length, passphrase, save_passphrase_locally,
+               use_vault, vault_url, wrapping_token, secret_path, user_key):
         """Performs the encryption workflow with the following steps:
 
         * Creates the lock file with the lock function.
@@ -683,8 +652,6 @@ class device:
         :type passphrase_length: int
         :param passphrase: Specified passphrase to be used for device encryption.
         :type passphrase: str
-        :param passphrase_confirmation: Passphrase confirmation, needs to be the same as passphrase.
-        :type passphrase_confirmation: str
         :param save_passphrase_locally: If set to true, the passphrase is written in the cryptdev .ini file.
         :type save_passphrase_locally: bool
         :param use_vault: If set to true, the passphrase is stored to HashiCorp Vault.
@@ -710,8 +677,7 @@ class device:
         if not self.is_encrypted(): # Check if the volume is encrypted, if it's not start the encryption procedure
             self.umount_vol()
             s3cret = self.setup_device(luks_header_backup_dir, luks_header_backup_file, cipher_algorithm, keysize, hash_algorithm,
-                                       passphrase_length, passphrase, passphrase_confirmation, use_vault, vault_url, wrapping_token,
-                                       secret_path, user_key)
+                                       passphrase_length, passphrase, use_vault, vault_url, wrapping_token, secret_path, user_key)
             unlock_if_false(s3cret, locked, LOCKFILE, message='Device setup procedure failed.')
         
         unlock_if_false(self.open_device(s3cret), locked, LOCKFILE, message='luksOpen failed, mapping not created.') # Create mapping
@@ -760,7 +726,7 @@ def encrypt_and_setup(device_name='/dev/vdb', cryptdev='crypt', mountpoint='/exp
                       filesystem='ext4', cipher_algorithm='aes-xts-plain64', keysize=256,
                       hash_algorithm='sha256', luks_header_backup_dir='/etc/luks',
                       luks_header_backup_file='luks-header.bck', luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
-                      passphrase_length=8, passphrase=None, passphrase_confirmation=None,
+                      passphrase_length=8, passphrase=None,
                       save_passphrase_locally=None, use_vault=False, vault_url=None,
                       wrapping_token=None, secret_path=None, user_key=None):
     """Performs the complete workflow to encrypt the device and to setup the encrypted volume with the following steps:
@@ -798,8 +764,6 @@ def encrypt_and_setup(device_name='/dev/vdb', cryptdev='crypt', mountpoint='/exp
     :type passphrase_length: int, optional
     :param passphrase: Specified passphrase to be used for device encryption, defaults to None
     :type passphrase: str, optional
-    :param passphrase_confirmation: Passphrase confirmation, needs to be the same as passphrase, defaults to None
-    :type passphrase_confirmation: str, optional
     :param save_passphrase_locally: If set to True, the passphrase is written in the .ini file in plain text, defaults to None
     :type save_passphrase_locally: bool, optional
     :param use_vault: If set to True, the passphrase is stored to HashiCorp Vautl, defaults to False
@@ -823,8 +787,8 @@ def encrypt_and_setup(device_name='/dev/vdb', cryptdev='crypt', mountpoint='/exp
     SUCCESS_FILE = '/var/run/fast-luks-encryption.success'
     
     device_to_encrypt.encrypt(cipher_algorithm, keysize, hash_algorithm, luks_header_backup_dir, luks_header_backup_file, 
-                              LOCKFILE, SUCCESS_FILE, luks_cryptdev_file, passphrase_length, passphrase, passphrase_confirmation,
-                              save_passphrase_locally, use_vault, vault_url, wrapping_token, secret_path, user_key)
+                              LOCKFILE, SUCCESS_FILE, luks_cryptdev_file, passphrase_length, passphrase, save_passphrase_locally,
+                              use_vault, vault_url, wrapping_token, secret_path, user_key)
 
     #cryptdev_variables = read_ini_file(luks_cryptdev_file)
     #luksUUID = cryptdev_variables['uuid']

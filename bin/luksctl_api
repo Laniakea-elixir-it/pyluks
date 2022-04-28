@@ -8,7 +8,7 @@ import argparse
 from pyluks import __version__
 from pyluks.luksctl_api import __path__ as luksctl_api_path_list
 from pyluks.luksctl_api.luksctl_run import __prefix__ as environment_prefix
-from pyluks.luksctl_api.luksctl_run import master, wn
+from pyluks.luksctl_api.luksctl_run import master
 from pyluks.luksctl_api.ssl_certificate import generate_self_signed_cert
 
 

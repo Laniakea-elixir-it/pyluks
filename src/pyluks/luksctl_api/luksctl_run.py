@@ -76,18 +76,18 @@ def read_api_config(luks_cryptdev_file, api_section):
     
     if os.path.exists(luks_cryptdev_file):
         # Read cryptdev ini file
-        config = ConfigParser(converters={'list': lambda x:[i.strip() for i in x.split(',')]})
+        config = ConfigParser()
         config.read(luks_cryptdev_file)
 
         # Get configuration dictionary
-        api_config = config[api_section].items()
+        api_config = dict(config[api_section].items())
         api_config['node_list'] = api_config['node_list'].split(',')
         api_config['exports_list'] = api_config['exports_list'].split(',')
 
     else:
         raise FileNotFoundError('Cryptdev ini file missing.')
 
-    return config_dict
+    return api_config
 
 
 def write_systemd_unit_file(working_directory, environment_prefix, user, group, app='master_app',

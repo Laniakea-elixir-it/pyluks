@@ -1,5 +1,4 @@
 # Import dependencies
-import json, requests
 import os, sys, distro
 from configparser import ConfigParser
 
@@ -222,11 +221,11 @@ class master:
         api_logger.debug(f'Volume status: {status}')
 
         if str(status) == '0':
-            return json.dumps({'volume_state': 'mounted' })
+            return {'volume_state': 'mounted' }
         elif str(status)  == '1':
-            return json.dumps({'volume_state': 'unmounted' })
+            return {'volume_state': 'unmounted' }
         else:
-            return json.dumps({'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr })
+            return {'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr }
 
 
     def open(self, vault_url, wrapping_token, secret_root, secret_path, secret_key):
@@ -253,7 +252,7 @@ class master:
         stdout, stderr, status = run_command(status_command)
 
         if str(status) == '0':
-            return json.dumps({'volume_state': 'mounted'})
+            return {'volume_state': 'mounted'}
         
         else:
             # Read passphrase from vault
@@ -276,13 +275,13 @@ class master:
                     self.nfs_restart()
                 if self.virtualization_type == 'docker':
                     self.docker_restart
-                return json.dumps({'volume_state': 'mounted' })
+                return {'volume_state': 'mounted' }
 
             elif str(status)  == '1':
-                return json.dumps({'volume_state': 'unmounted' })
+                return {'volume_state': 'unmounted' }
 
             else:
-                return json.dumps({'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr})
+                return {'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr}
 
 
     def nfs_restart(self):

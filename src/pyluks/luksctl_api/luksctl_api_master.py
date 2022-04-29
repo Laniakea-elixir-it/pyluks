@@ -1,5 +1,5 @@
 # Import dependencies
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 import json
 import os
 import logging
@@ -39,7 +39,9 @@ def get_status():
 
     master_node = instantiate_master_node()
     
-    return master_node.get_status()
+    response = master_node.get_status()
+
+    return jsonify(response)
 
 
 @app.route('/luksctl_api/v1.0/open', methods=['POST'])
@@ -65,8 +67,10 @@ def luksopen():
     if wn_list != None:
         api_logger.debug(wn_list)
 
-    return master_node.open(vault_url=request.json['vault_url'],
-                            wrapping_token=request.json['vault_token'],
-                            secret_root=request.json['secret_root'],
-                            secret_path=request.json['secret_path'],
-                            secret_key=request.json['secret_key'])
+    response = master_node.open(vault_url=request.json['vault_url'],
+                                wrapping_token=request.json['vault_token'],
+                                secret_root=request.json['secret_root'],
+                                secret_path=request.json['secret_path'],
+                                secret_key=request.json['secret_key'])
+    
+    return jsonify(response)

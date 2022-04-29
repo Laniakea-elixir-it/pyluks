@@ -26,16 +26,16 @@ def cli_options():
     parser = argparse.ArgumentParser(description='LUKS storage management script API')
     parser.add_argument('-V', '--version', action='store_true', dest='version', default=False, help='Print luksctl_api version')
     parser.add_argument('--infrastructure-config', choices=['single_vm','cluster'], dest='infrastructure_config', help='Infrastructure configuration')
-    parser.add_argument('--virtualization-type', default=None, dest='virtualization_type', help='Virtualization type')
-    parser.add_argument('--node-list', nargs='*', dest='node_list', default=None, help='Worker nodes IPs')
-    parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin', help='PATH for the sudo command')
-    parser.add_argument('--env-path', dest='env_path', default=None, help='Virtualenv path')
+    parser.add_argument('--virtualization-type', default='', dest='virtualization_type', help='Virtualization type')
+    parser.add_argument('--node-list', nargs='*', dest='node_list', default='', help='Worker nodes IPs')
+    parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin/sudo', help='PATH for the sudo command')
+    parser.add_argument('--env-path', dest='env_path', help='Virtualenv path')
     parser.add_argument('--ssl', action='store_true', dest='ssl', default=False, help='Use ssl self signed certificate')
     parser.add_argument('--ssl-cert-file', dest='cert_file', default='/etc/luks/gunicorn-cert.pem', help='SSL certificate file')
     parser.add_argument('--ssl-key-file', dest='key_file', default='/etc/luks/gunicorn-key.pem', help='SSL key file')
     parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
     parser.add_argument('--user', dest='user', default='luksctl_api', help='luksctl-api service user')
-    parser.add_argument('--exports', nargs='*', dest='exports', default=['/export'], help='Directories exported with nfs')
+    parser.add_argument('--exports', nargs='*', dest='exports_list', default=['/export'], help='Directories exported with nfs')
 
     return parser.parse_args()
 
@@ -45,14 +45,14 @@ def cli_options():
 # FUNCTIONS
 
 def master_setup(options):
-    
-    master_node = master(infrastructure_config=options.infrastructure_config,
-                         virtualization_type=options.virtualization_type,
-                         node_list=options.node_list,
-                         sudo_path=options.sudo_path,
-                         env_path=options.env_path)
 
-    master_node.write_api_config()
+    write_api_config(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
+                     infrastructure_config=options.infrastructure_config,
+                     env_path=options.env_path,
+                     virtualization_type=options.virtualization_type,
+                     node_list=options.node_list,
+                     exports_list=options.exports_list,
+                     sudo_path=options.sudo_path)
 
     if options.ssl:
         generate_self_signed_cert(cert_file=options.cert_file,
@@ -61,12 +61,10 @@ def master_setup(options):
     shutil.copy(src=f'{luksctl_api_path}/gunicorn.conf.py',
                 dst=options.gunicorn_config_file)
 
-    master_node.write_exports_file(nfs_export_list=options.exports)
-
-    master_node.write_systemd_unit_file(working_directory=luksctl_api_path,
-                                        environment_prefix=environment_prefix,
-                                        user=options.user,
-                                        group=options.user)
+    write_systemd_unit_file(working_directory=luksctl_api_path,
+                            environment_prefix=environment_prefix,
+                            user=options.user,
+                            group=options.user)
 
 
 

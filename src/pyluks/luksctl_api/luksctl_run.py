@@ -32,6 +32,36 @@ api_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
 ################################################################################
 # FUNCTIONS
 
+def write_api_config(luks_cryptdev_file, infrastructure_config, env_path, virtualization_type='', node_list='',
+                     exports_list='', sudo_path='/usr/bin/sudo'):
+    """Writes the API configuration to the cryptdev .ini file in the luksctl_api section.
+
+    :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to '/etc/luks/luks-cryptdev.ini'
+    :type luks_cryptdev_file: str, optional
+    """
+    #arguments = locals()
+    #arguments.pop('luks_cryptdev_file')
+
+    config = ConfigParser()
+    config.read(luks_cryptdev_file)
+    # Remove luksctl_api section if written previously
+    if 'luksctl_api' in config.sections():
+        config.remove_section('luksctl_api')
+
+    config.add_section('luksctl_api')
+    api_config = config['luksctl_api']
+
+    api_config['infrastructure_config'] = infrastructure_config
+    api_config['env_path'] = env_path
+    api_config['virtualization_type'] = virtualization_type
+    api_config['node_list'] = ','.join(node_list)
+    api_config['exports_list'] = ','.join(exports_list)
+    api_config['sudo_path'] = sudo_path
+
+    with open(luks_cryptdev_file, 'w') as f:
+        config.write(f)
+
+
 def read_api_config(luks_cryptdev_file, api_section):
     """Reads the api configurations from the cryptdev .ini file.
 
@@ -46,29 +76,13 @@ def read_api_config(luks_cryptdev_file, api_section):
     
     if os.path.exists(luks_cryptdev_file):
         # Read cryptdev ini file
-        config = ConfigParser()
+        config = ConfigParser(converters={'list': lambda x:[i.strip() for i in x.split(',')]})
         config.read(luks_cryptdev_file)
-        api_config = config[api_section]
 
-        # Set variables from cryptdev ini file (master node)
-        infrastructure_config = api_config['infrastructure_configuration'] if 'infrastructure_configuration' in api_config else None
-        virtualization_type = api_config['virtualization_type'] if 'virtualization_type' in api_config else None
-        node_list = json.loads(api_config['wn_ips']) if 'wn_ips' in api_config else None
-        sudo_path = api_config['sudo_path'] if 'sudo_path' in api_config else None
-        env_path = api_config['env_path'] if 'env_path' in api_config else None
-
-        # Set variables from cryptdev ini file (worker node)
-        nfs_mountpoint_list = json.loads(api_config['nfs_mountpoint_list']) if 'nfs_mountpoint_list' in api_config else None
-
-        # Define variables dictionary
-        config_dict = {
-            'infrastructure_config':infrastructure_config,
-            'virtualization_type':virtualization_type,
-            'node_list':node_list,
-            'sudo_path':sudo_path,
-            'env_path':env_path,
-            'nfs_mountpoint_list':nfs_mountpoint_list
-            }
+        # Get configuration dictionary
+        api_config = config[api_section].items()
+        api_config['node_list'] = api_config['node_list'].split(',')
+        api_config['exports_list'] = api_config['exports_list'].split(',')
 
     else:
         raise FileNotFoundError('Cryptdev ini file missing.')
@@ -76,7 +90,7 @@ def read_api_config(luks_cryptdev_file, api_section):
     return config_dict
 
 
-def write_systemd_unit_file(working_directory, environment_prefix, user, group, app,
+def write_systemd_unit_file(working_directory, environment_prefix, user, group, app='master_app',
                             service_file='/etc/systemd/system/luksctl-api.service',
                             gunicorn_config_file='/etc/luks/gunicorn.conf.py'):
     """General function to write the unit file used by systemd that defines the luksctl-api service.
@@ -124,6 +138,23 @@ def write_systemd_unit_file(working_directory, environment_prefix, user, group, 
         config.write(sf)
 
 
+def write_exports_file(exports_list, node_list):
+    """Adds lines for each export directory and worker node to configure nfs exports.
+
+    :param exports_list: List containing the directories to be exported with nfs.
+    :type exports_list: list
+    :param node_list: List containing IPs of the worker nodes.
+    :type node_list: list
+    """
+    
+    with open('/etc/exports','r+') as exports_file:
+        for export_dir in exports_list:
+            for node in node_list:
+                exports_line = f'{export_dir} {node}(rw,sync,no_root_squash)'
+                if exports_line not in exports_file.readlines():
+                    exports_file.write(f'{export_dir} {node}(rw,sync,no_root_squash)')
+
+
 
 ################################################################################
 # NODES CLASSES
@@ -133,8 +164,7 @@ class master:
     """
 
 
-    def __init__(self, infrastructure_config=None, virtualization_type=None, node_list=None, sudo_path='/usr/bin', env_path=None,
-                 luks_cryptdev_file=None, api_section='luksctl_api'):
+    def __init__(self, luks_cryptdev_file, api_section='luksctl_api'):
         """Instantiates the master class. If luks_cryptdev_file (and eventually also api_section) is defined, other arguments will be ignored and
         the object's attributes are read from the cryptdev .ini file.
 
@@ -153,25 +183,17 @@ class master:
         :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
         :type api_section: str, optional
         """
-        if luks_cryptdev_file is not None:
-            api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
-            self.infrastructure_config = api_configs['infrastructure_config']
-            self.virtualization_type = api_configs['virtualization_type']
-            self.node_list = api_configs['node_list']
-            self.sudo_path = api_configs['sudo_path']
-            self.env_path = api_configs['env_path']
-
-        else:
-            self.infrastructure_config = infrastructure_config
-            self.virtualization_type = virtualization_type
-            self.node_list = node_list
-            self.sudo_path = sudo_path
-            self.env_path = __prefix__ if env_path == None else env_path
         
-        self.sudo_cmd = f'{self.sudo_path}/sudo'
+        api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
+        self.infrastructure_config = api_configs['infrastructure_config']
+        self.virtualization_type = api_configs['virtualization_type']
+        self.node_list = api_configs['node_list']
+        self.exports_list = api_configs['exports_list']
+        self.sudo_path = api_configs['sudo_path']
+        self.env_path = api_configs['env_path']
+
         self.luksctl_cmd = f'{self.env_path}/bin/luksctl'
         self.distro_id = distro.id()
-        self.app_name = 'master_app'
 
 
     def get_infrastructure_config(self): return self.infrastructure_config
@@ -179,66 +201,6 @@ class master:
     def get_node_list(self): return self.node_list
     def get_sudo_path(self): return self.sudo_path
     def get_env_path(self): return self.env_path
-
-
-    def write_api_config(self, luks_cryptdev_file='/etc/luks/luks-cryptdev.ini'):
-        """Writes the API configuration to the cryptdev .ini file in the luksctl_api section.
-
-        :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to '/etc/luks/luks-cryptdev.ini'
-        :type luks_cryptdev_file: str, optional
-        """
-
-        config = ConfigParser()
-        config.read(luks_cryptdev_file)
-        # Remove luksctl_api section if written previously
-        if 'luksctl_api' in config.sections():
-            config.remove_section('luksctl_api')
-
-        config.add_section('luksctl_api')
-        api_config = config['luksctl_api']
-
-        api_config['infrastructure_configuration'] = self.infrastructure_config
-
-        if self.virtualization_type != None:
-            api_config['virtualization_type'] = self.virtualization_type
-
-        if self.node_list != None:
-            api_config['wn_ips'] = json.dumps(self.node_list)
-
-        api_config['sudo_path'] = self.sudo_path
-        api_config['env_path'] = self.env_path
-
-        with open(luks_cryptdev_file, 'w') as f:
-            config.write(f)
-
-
-    def write_systemd_unit_file(self, working_directory, environment_prefix, user, group):
-        """Writes the unit file used by systemd that defines the luksctl-api service. It wraps the general
-        write_systemd_unit_file function.
-
-        :param working_directory: Path to the luksctl_api subpackage
-        :type working_directory: str
-        :param environment_prefix: Path to the virtual environment in which pyluks is installed.
-        :type environment_prefix: str
-        :param user: User under which the luksctl-api service is run.
-        :type user: str
-        :param group: User group under which the luksctl-api service is run.
-        :type group: str
-        """
-        
-        write_systemd_unit_file(working_directory=working_directory,
-                                environment_prefix=environment_prefix,
-                                user=user,
-                                group=group,
-                                app=self.app_name)
-
-
-    def write_exports_file(self, nfs_export_list=['/export']):
-       
-       with open('/etc/exports','a+') as exports_file:
-           for export_dir in nfs_export_list:
-               for node in self.node_list:
-                   exports_file.write(f'{export_dir} {node}:(rw,sync,no_root_squash)')
 
 
     def get_status(self):
@@ -252,7 +214,7 @@ class master:
         :rtype: str
         """
 
-        status_command = f'{self.sudo_cmd} {self.luksctl_cmd} status'
+        status_command = f'{self.sudo_path} {self.luksctl_cmd} status'
         stdout, stderr, status = run_command(status_command)
 
         api_logger.debug(f'Volume status stdout: {stdout}')
@@ -287,7 +249,7 @@ class master:
         :rtype: str
         """
         
-        status_command = f'{self.sudo_cmd} {self.luksctl_cmd} status'
+        status_command = f'{self.sudo_path} {self.luksctl_cmd} status'
         stdout, stderr, status = run_command(status_command)
 
         if str(status) == '0':
@@ -302,7 +264,7 @@ class master:
                                  secret_key=secret_key)
             
             # Open volume
-            open_command = f'printf "{secret}\n" | {self.sudo_cmd} {self.luksctl_cmd} open' 
+            open_command = f'printf "{secret}\n" | {self.sudo_path} {self.luksctl_cmd} open' 
             stdout, stderr, status = run_command(open_command)
 
             api_logger.debug(f'Volume status stdout: {stdout}')
@@ -312,6 +274,8 @@ class master:
             if str(status) == '0':
                 if self.infrastructure_config == 'cluster':
                     self.nfs_restart()
+                if self.virtualization_type == 'docker':
+                    self.docker_restart
                 return json.dumps({'volume_state': 'mounted' })
 
             elif str(status)  == '1':
@@ -320,6 +284,7 @@ class master:
             else:
                 return json.dumps({'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr})
 
+
     def nfs_restart(self):
         """Restarts the nfs service and calls the master.mount_nfs_on_wns method.
         """
@@ -327,9 +292,9 @@ class master:
         api_logger.debug(f'Restarting NFS on: {self.distro_id}')
         
         if self.distro_id == 'centos':
-            restart_command = f'{self.sudo_cmd} systemctl restart nfs-server'
+            restart_command = f'{self.sudo_path} systemctl restart nfs-server'
         elif self.distro_id == 'ubuntu':
-            restart_command = f'{self.sudo_cmd} systemctl restart nfs-kernel-server'
+            restart_command = f'{self.sudo_path} systemctl restart nfs-kernel-server'
         else:
             restart_command = ''
         
@@ -340,3 +305,16 @@ class master:
         api_logger.debug(f'NFS status: {status}')
         api_logger.debug(f'NFS status stdout: {stdout}')
         api_logger.debug(f'NFS status stderr: {stderr}')
+
+
+    def docker_restart(self):
+        """Restarts the docker service.
+        """
+
+        restart_command = f'{self.sudo_path} systemctl restart docker'
+
+        stdout, stderr, status = run_command(restart_command)
+
+        api_logger.debug(f'Docker service status: {status}')
+        api_logger.debug(f'Docker service stdout: {stdout}')
+        api_logger.debug(f'Docker service stderr: {stderr}')

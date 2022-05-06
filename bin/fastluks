@@ -47,6 +47,8 @@ if __name__ == '__main__':
     if options.version is True:
         print('pyluks package: ' + __version__)
     else:
+        if not options.save_passphrase_locally and not options.use_vault:
+            options.save_passphrase_locally = True
         encrypt_and_setup(options.device_name, options.cryptdev, options.mountpoint, options.filesystem,
                           options.cipher_algorithm, options.keysize, options.hash_algorithm,
                           options.luks_header_backup_dir, options.luks_header_backup_file, options.luks_cryptdev_file,

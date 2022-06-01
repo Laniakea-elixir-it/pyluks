@@ -1,5 +1,8 @@
 # Import dependencies
 import zc.lockfile
+import sys
+import os
+import re
 
 LOCKFILE = '/var/run/fast-luks.lock'
 

@@ -2,11 +2,12 @@
 
 # Import dependencies
 import argparse
+import os
 import traceback
 
 # Import internal dependencies
 from pyluks import __version__
-from pyluks.fastluks import device, end_encrypt_procedure, end_volume_setup_procedure, lockfile
+from pyluks.fastluks import device, end_encrypt_procedure, end_volume_setup_procedure, lockfile, LUKSError
 
 
 

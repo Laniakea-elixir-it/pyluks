@@ -65,8 +65,16 @@ if __name__ == '__main__':
                                        hash_algorithm=options.hash_algorithm)
             
             # Encrypt volume
-            device_to_encrypt.encrypt(luks_header_backup_file, luks_cryptdev_file, passphrase_length, passphrase, save_passphrase_locally,
-                                      use_vault, vault_url, wrapping_token, secret_path, user_key)
+            device_to_encrypt.encrypt(options.luks_header_backup_file,
+                                      options.luks_cryptdev_file,
+                                      options.passphrase_length,
+                                      options.passphrase,
+                                      options.save_passphrase_locally,
+                                      options.use_vault,
+                                      options.vault_url,
+                                      options.wrapping_token,
+                                      options.secret_path,
+                                      options.user_key)
             
             # LUKS encryption finished without errors. Print success file for ansible
             end_encrypt_procedure('/var/run/fast-luks-encryption.success') 

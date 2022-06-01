@@ -2,10 +2,11 @@
 
 # Import dependencies
 import argparse
+import traceback
 
 # Import internal dependencies
 from pyluks import __version__
-from pyluks.fastluks import encrypt_and_setup
+from pyluks.fastluks import device, end_encrypt_procedure, end_volume_setup_procedure, lockfile
 
 
 
@@ -21,8 +22,7 @@ def cli_options():
     parser.add_argument('-c', '--cipher', default='aes-xts-plain64', dest='cipher_algorithm', help='Cipher algorithm')
     parser.add_argument('-s', '--key-size', default=256, type=int, dest='keysize', help='Key size')
     parser.add_argument('--hash', default='sha256', dest='hash_algorithm', help='Hash algorithm')
-    parser.add_argument('--header-backup-dir', default='/etc/luks', dest='luks_header_backup_dir', help='LUKS header backup dir')
-    parser.add_argument('--header-backup-file', default='luks-header.bck', dest='luks_header_backup_file', help='LUKS header backup file')
+    parser.add_argument('--header-backup-file', default='/etc/luks/luks-header.bck', dest='luks_header_backup_file', help='LUKS header backup file')
     parser.add_argument('--cryptdev-file', default='/etc/luks/luks-cryptdev.ini', dest='luks_cryptdev_file', help='LUKS cryptdev ini file')
     parser.add_argument('-l', '--passphrase-length', default=8, type=int, dest='passphrase_length', help='Passphrase length')
     parser.add_argument('-p', '--passphrase', default=None, dest='passphrase', help='Passphrase')
@@ -45,10 +45,38 @@ if __name__ == '__main__':
 
     if options.version is True:
         print('pyluks package: ' + __version__)
+    
     else:
-        encrypt_and_setup(options.device_name, options.cryptdev, options.mountpoint, options.filesystem,
-                          options.cipher_algorithm, options.keysize, options.hash_algorithm,
-                          options.luks_header_backup_dir, options.luks_header_backup_file, options.luks_cryptdev_file,
-                          options.passphrase_length, options.passphrase, options.save_passphrase_locally,
-                          options.use_vault, options.vault_url, options.wrapping_token,
-                          options.secret_path, options.user_key)
+        try:
+            if not os.geteuid() == 0:
+                sys.exit('Error: Script must be run as root.')
+
+            # Perform file locking
+            locker = lockfile.lock()
+
+            # Instantiate the device
+            device_to_encrypt = device(device_name=options.device_name,
+                                       cryptdev=options.cryptdev,
+                                       mountpoint=options.mountpoint,
+                                       filesystem=options.filesystem,
+                                       cipher_algorithm=options.cipher_algorithm,
+                                       keysize=options.keysize,
+                                       hash_algorithm=options.hash_algorithm)
+            
+            # Encrypt volume
+            device_to_encrypt.encrypt(luks_header_backup_file, luks_cryptdev_file, passphrase_length, passphrase, save_passphrase_locally,
+                                      use_vault, vault_url, wrapping_token, secret_path, user_key)
+            
+            # LUKS encryption finished without errors. Print success file for ansible
+            end_encrypt_procedure('/var/run/fast-luks-encryption.success') 
+
+            # Setup volume (make filesystem and mount)
+            device_to_encrypt.volume_setup()
+            
+            # Volume setup finished without errors. Print success file for ansible
+            end_volume_setup_procedure('/var/run/fast-luks-volume-setup.success')
+
+        # When a LUKSError occurs, show the error, unlock and terminate the script
+        except LUKSError:
+            traceback.print_exc()
+            lockfile.unlock(locker)

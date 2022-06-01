@@ -379,11 +379,11 @@ class device:
         :rtype: str or bool
         """
         echo('INFO', 'Start the encryption procedure.')
-        fastluks_logger.info(f'Using {cipher_algorithm} algorithm to luksformat the volume.')
+        fastluks_logger.info(f'Using {self.cipher_algorithm} algorithm to luksformat the volume.')
         fastluks_logger.debug('Start cryptsetup')
-        self.info(cipher_algorithm, hash_algorithm, keysize)
+        self.info()
         fastluks_logger.debug('Cryptsetup full command:')
-        fastluks_logger.debug(f'cryptsetup -v --cipher {cipher_algorithm} --key-size {keysize} --hash {hash_algorithm} --iter-time 2000 --use-urandom --verify-passphrase luksFormat {device} --batch-mode')
+        fastluks_logger.debug(f'cryptsetup -v --cipher {self.cipher_algorithm} --key-size {self.keysize} --hash {self.hash_algorithm} --iter-time 2000 --use-urandom --verify-passphrase luksFormat {device} --batch-mode')
 
         if passphrase_length == None:
             if passphrase == None:
@@ -485,7 +485,7 @@ class device:
             config_luks = config['luks']
             config_luks['cipher_algorithm'] = self.cipher_algorithm
             config_luks['hash_algorithm'] = self.hash_algorithm
-            config_luks['keysize'] = str(keysize)
+            config_luks['keysize'] = str(self.keysize)
             config_luks['device'] = self.device_name
             config_luks['uuid'] = luksUUID
             config_luks['cryptdev'] = self.cryptdev
@@ -616,8 +616,7 @@ class device:
 
         self.encryption_status() # Check status
 
-        self.create_cryptdev_ini_file(luks_cryptdev_file, cipher_algorithm, hash_algorithm, keysize,
-                                      luks_header_backup_file, save_passphrase_locally, s3cret) # Create ini file
+        self.create_cryptdev_ini_file(luks_cryptdev_file, luks_header_backup_file, save_passphrase_locally, s3cret) # Create ini file
 
 
     def volume_setup(self):

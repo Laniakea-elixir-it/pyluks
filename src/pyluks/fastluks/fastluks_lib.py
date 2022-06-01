@@ -548,9 +548,9 @@ class device:
         run_command('df -Hv', logger=fastluks_logger)
 
 
-    def encrypt(self, cipher_algorithm, keysize, hash_algorithm, luks_header_backup_file, 
-               luks_cryptdev_file, passphrase_length, passphrase, save_passphrase_locally,
-               use_vault, vault_url, wrapping_token, secret_path, user_key):
+    def encrypt(self, luks_header_backup_file, luks_cryptdev_file,
+                passphrase_length, passphrase, save_passphrase_locally,
+                use_vault, vault_url, wrapping_token, secret_path, user_key):
         """Performs the encryption workflow with the following steps:
 
         * Creates the lock file with the lock function.
@@ -607,8 +607,8 @@ class device:
 
         if not self.is_encrypted(): # Check if the volume is encrypted, if it's not start the encryption procedure
             self.umount_vol()
-            s3cret = self.setup_device(luks_header_backup_file, cipher_algorithm, keysize, hash_algorithm,
-                                       passphrase_length, passphrase, use_vault, vault_url, wrapping_token, secret_path, user_key)
+            s3cret = self.setup_device(luks_header_backup_file, passphrase_length, passphrase,
+                                       use_vault, vault_url, wrapping_token, secret_path, user_key)
         else:
             raise LUKSError('Device is already encrypted')
 

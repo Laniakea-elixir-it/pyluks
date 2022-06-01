@@ -430,8 +430,8 @@ class device:
         :return: False if any error occur (e.g. if the passphrase is wrong or if the crypt device already exists) 
         :rtype: bool, optional
         """
-        echo('INFO', 'Open LUKS volume')
-        if Path(f'/dev/mapper/{self.cryptdev}').is_block_device():
+        if not Path(f'/dev/mapper/{self.cryptdev}').is_block_device():
+            echo('INFO', f'Opening LUKS volume and mapping it to /dev/mapper/{self.cryptdev}')
             _, _, openec = self.luksOpen(s3cret)
             
             if openec != 0:
@@ -445,6 +445,8 @@ class device:
                     fastluks_logger.error(f'Mounting {self.device_name} to {self.mountpoint} again.')
                     run_command(f'mount {self.device_name} {self.mountpoint}', logger=fastluks_logger)
                     raise LUKSError('luksOpen failed, mapping not created.') # unlock and exit
+        else:
+            echo('INFO', f'LUKS volume already opened and mapped to /dev/mapper/{self.cryptdev}')
 
 
     def encryption_status(self):

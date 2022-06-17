@@ -16,7 +16,7 @@ from pyluks.fastluks import device, end_encrypt_procedure, end_volume_setup_proc
 
 def cli_options():
     parser = argparse.ArgumentParser(description='fastluks main script')
-    parser.add_argument('--device', default='/dev/vdb',dest='device_name', help='Device')
+    parser.add_argument('--device', dest='device_name', help='Device')
     parser.add_argument('--cryptdev', default='crypt', dest='cryptdev', help='Cryptdev')
     parser.add_argument('-m', '--mountpoint', default='/export', dest='mountpoint', help='Cryptdev mountpoint')
     parser.add_argument('-f', '--filesystem', default='ext4', dest='filesystem', help='Device filesystem')

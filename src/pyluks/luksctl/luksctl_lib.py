@@ -97,7 +97,7 @@ class LUKSCtl:
             print('Encrypted volume: [ OK ]')
             sys.exit(0)
         else:
-            luksctl_logger.error(f'[luksctl] {stdErrValue}')
+            luksctl_logger.debug(f'[luksctl] {stdErrValue}')
             print('Encrypted volume: [ FAIL ]')
             sys.exit(1)
     

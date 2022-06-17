@@ -3,6 +3,7 @@ import subprocess
 import os
 from configparser import ConfigParser
 import logging
+import sys
 
 
 
@@ -70,14 +71,21 @@ def create_logger(luks_cryptdev_file, logger_name, loggers_section='logs'):
     # Define logging format
     formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     
-    # Define logging handler
-    handler = logging.FileHandler(logfile, mode='a+')  
-    handler.setFormatter(formatter)
+    # Define file logging handler
+    file_handler = logging.FileHandler(logfile, mode='a+')  
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.DEBUG)
+
+    # Define stdout logging handler
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
+    stdout_handler.setLevel(logging.INFO)
 
     # Create logger
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
+    logger.addHandler(file_handler)
+    logger.addHandler(stdout_handler)
 
     return logger
 

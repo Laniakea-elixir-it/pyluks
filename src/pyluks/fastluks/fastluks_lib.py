@@ -51,37 +51,6 @@ fastluks_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini'
                                 logger_name=LOGGER_NAME,
                                 loggers_section='logs')
 
-#____________________________________
-# Custom stdout logger
-def check_loglevel(loglevel):
-    """Check that loglevel is valid, raise an error if the loglevel is not valid.
-    This function is used by the echo function.
-
-    :param loglevel: loglevel
-    :type loglevel: str
-    :raises ValueError: Raises an error if the loglevel specified is not one of INFO, DEBUG WARNING or ERROR.
-    """
-    valid_loglevels = ['INFO','DEBUG','WARNING','ERROR']
-    if loglevel not in valid_loglevels:
-        raise ValueError(f'loglevel must be one of {valid_loglevels}')
-
-
-def echo(loglevel, text):
-    """Custom stdout logger. It prints the loglevel, time and the specified text.
-
-    :param loglevel: loglevel. Accepted values are INFO, DEBUG, WARNING or ERROR.
-    :type loglevel: str
-    :param text: Text to print to stdout.
-    :type text: str
-    :return: The message printed to stdout, including the loglevel and time.
-    :rtype: str
-    """
-    check_loglevel(loglevel)
-    time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    message = f'{loglevel} {time} {text}'
-    print(message)
-    return message
-
 
 
 ################################################################################
@@ -114,10 +83,10 @@ def install_cryptsetup(logger=None):
     :type logger: logging.Logger, optional
     """
     if DISTNAME == 'ubuntu':
-        echo('INFO', 'Distribution: Ubuntu. Using apt.')
+        fastluks_logger.info('Distribution: Ubuntu. Using apt.')
         run_command('apt-get install -y cryptsetup pv', logger)
     else:
-        echo('INFO', 'Distribution: CentOS. Using yum.')
+        fastluks_logger.info('Distribution: CentOS. Using yum.')
         run_command('yum install -y cryptsetup-luks pv', logger)
 
 
@@ -125,25 +94,25 @@ def install_cryptsetup(logger=None):
 def check_cryptsetup():
     """Checks if the dm-crypt module and cryptsetup are installed.
     """
-    echo('INFO', 'Check if the required applications are installed...')
+    fastluks_logger.info('Check if the required applications are installed...')
     
     _, _, dmsetup_status = run_command('type -P dmsetup &>/dev/null')
     if dmsetup_status != 0:
-        echo('INFO', 'dmsetup is not installed. Installing...')
+        fastluks_logger.info('dmsetup is not installed. Installing...')
         if DISTNAME == 'ubuntu':
             run_command('apt-get install -y dmsetup')
         else:
             run_command('yum install -y device-mapper')
     else:
-        echo('INFO', 'dmsetup is already installed.')
+        fastluks_logger.info('dmsetup is already installed.')
     
     _, _, cryptsetup_status = run_command('type -P cryptsetup &>/dev/null')
     if cryptsetup_status != 0:
-        echo('INFO', 'cryptsetup is not installed. Installing...')
+        fastluks_logger.info('cryptsetup is not installed. Installing...')
         install_cryptsetup(logger=fastluks_logger)
-        echo('INFO', 'cryptsetup installed.')
+        fastluks_logger.info('cryptsetup installed.')
     else:
-        echo('INFO', 'cryptsetup is already installed.')
+        fastluks_logger.info('cryptsetup is already installed.')
 
 
 def create_random_secret(passphrase_length):
@@ -167,7 +136,7 @@ def end_encrypt_procedure(SUCCESS_FILE):
     """
     with open(SUCCESS_FILE, 'w') as success_file:
         success_file.write('LUKS encryption completed.') # WARNING DO NOT MODFIFY THIS LINE, THIS IS A CONTROL STRING FOR ANSIBLE
-    echo('INFO', 'SUCCESSFUL.')
+    fastluks_logger.info('SUCCESSFUL.')
 
 
 def end_volume_setup_procedure(SUCCESS_FILE):
@@ -180,7 +149,7 @@ def end_volume_setup_procedure(SUCCESS_FILE):
     """
     with open(SUCCESS_FILE,'w') as success_file:
         success_file.write('Volume setup completed.') # WARNING DO NOT MODFIFY THIS LINE, THIS IS A CONTROL STRING FOR ANSIBLE
-    echo('INFO', 'SUCCESSFUL.')
+    fastluks_logger.info('SUCCESSFUL.')
 
 
 def read_ini_file(cryptdev_ini_file):
@@ -273,7 +242,7 @@ class device:
         fastluks_logger.debug('Checking if the volume is already encrypted.')
         devices, _, _ = run_command('lsblk -p -o NAME,FSTYPE')
         if re.search(f'{self.device_name}\s+crypto_LUKS', devices):
-                fastluks_logger.info('The volume is already encrypted')
+                fastluks_logger.debug('The volume is already encrypted')
                 return True
         else:
             return False
@@ -282,9 +251,9 @@ class device:
     def umount_vol(self):
         """Unmount the device
         """
-        fastluks_logger.info('Umounting device.')
+        fastluks_logger.debug('Umounting device.')
         run_command(f'umount {self.mountpoint}', logger=fastluks_logger)
-        fastluks_logger.info(f'{self.device_name} umounted, ready for encryption!')
+        fastluks_logger.debug(f'{self.device_name} umounted, ready for encryption!')
 
 
     def luksFormat(self, s3cret):
@@ -338,15 +307,15 @@ class device:
         :param keysize: Key-size for the cipher algorithm
         :type keysize: int
         """
-        echo('DEBUG', f'LUKS header information for {self.device_name}')
-        echo('DEBUG', f'Cipher algorithm: {self.cipher_algorithm}')
-        echo('DEBUG', f'Hash algorithm {self.hash_algorithm}')
-        echo('DEBUG', f'Keysize: {self.keysize}')
-        echo('DEBUG', f'Device: {self.device_name}')
-        echo('DEBUG', f'Crypt device: {self.cryptdev}')
-        echo('DEBUG', f'Mapper: /dev/mapper/{self.cryptdev}')
-        echo('DEBUG', f'Mountpoint: {self.mountpoint}')
-        echo('DEBUG', f'File system: {self.filesystem}')
+        fastluks_logger.info(f'LUKS header information for {self.device_name}')
+        fastluks_logger.info(f'Cipher algorithm: {self.cipher_algorithm}')
+        fastluks_logger.info(f'Hash algorithm {self.hash_algorithm}')
+        fastluks_logger.info(f'Keysize: {self.keysize}')
+        fastluks_logger.info(f'Device: {self.device_name}')
+        fastluks_logger.info(f'Crypt device: {self.cryptdev}')
+        fastluks_logger.info(f'Mapper: /dev/mapper/{self.cryptdev}')
+        fastluks_logger.info(f'Mountpoint: {self.mountpoint}')
+        fastluks_logger.info(f'File system: {self.filesystem}')
 
     def setup_device(self, luks_header_backup_file, passphrase_length, passphrase, use_vault, vault_url, wrapping_token, secret_path, user_key):
         """Performs the setup wrokflow to encrypt the device by performing the following steps:
@@ -378,8 +347,8 @@ class device:
         :return: The passphrase if the setup is successful or False if it fails.
         :rtype: str or bool
         """
-        echo('INFO', 'Start the encryption procedure.')
-        fastluks_logger.info(f'Using {self.cipher_algorithm} algorithm to luksformat the volume.')
+        fastluks_logger.info('Start the encryption procedure.')
+        fastluks_logger.debug(f'Using {self.cipher_algorithm} algorithm to luksformat the volume.')
         fastluks_logger.debug('Start cryptsetup')
         self.info()
         fastluks_logger.debug('Cryptsetup full command:')
@@ -387,7 +356,7 @@ class device:
 
         if passphrase_length == None:
             if passphrase == None:
-                echo('ERROR', "Missing passphrase!")
+                fastluks_logger.error("Missing passphrase!")
                 raise LUKSError('Device setup procedure failed.') # unlock and exit
             s3cret = passphrase
         else:
@@ -399,7 +368,7 @@ class device:
         # Write the secret to vault
         if use_vault:
             write_secret_to_vault(vault_url, wrapping_token, secret_path, user_key, s3cret)
-            echo('INFO','Passphrase stored in Vault')
+            fastluks_logger.info('Passphrase stored in Vault')
 
         # Backup LUKS header
         luks_header_backup_dir = os.path.dirname(luks_header_backup_file)
@@ -417,7 +386,7 @@ class device:
             # 5 device already exists or device is busy.
             fastluks_logger.error(f'Command cryptsetup failed with exit code {luksHeaderBackup_ec}! Mounting {self.device_name} to {self.mountpoint} and exiting.')
             if luksHeaderBackup_ec == 2:
-                echo('ERROR', 'Bad passphrase. Please try again.')
+                fastluks_logger.error('Bad passphrase. Please try again.')
             raise LUKSError('Device setup procedure failed.') # unlock and exit
 
         return s3cret
@@ -431,29 +400,29 @@ class device:
         :rtype: bool, optional
         """
         if not Path(f'/dev/mapper/{self.cryptdev}').is_block_device():
-            echo('INFO', f'Opening LUKS volume and mapping it to /dev/mapper/{self.cryptdev}')
+            fastluks_logger.info(f'Opening LUKS volume and mapping it to /dev/mapper/{self.cryptdev}')
             _, _, openec = self.luksOpen(s3cret)
             
             if openec != 0:
                 if openec == 2:
-                    echo('ERROR', 'Bad passphrase. Please try again.')
+                    fastluks_logger.error('Bad passphrase. Please try again.')
                     raise LUKSError('luksOpen failed, mapping not created.') # unlock and exit
                 else:
-                    echo('ERROR', f'Crypt device already exists! Please check logs: {LOGFILE}')
+                    fastluks_logger.error(f'Crypt device already exists! Please check logs: {LOGFILE}')
                     fastluks_logger.error('Unable to luksOpen device.')
                     fastluks_logger.error(f'/dev/mapper/{self.cryptdev} already exists.')
                     fastluks_logger.error(f'Mounting {self.device_name} to {self.mountpoint} again.')
                     run_command(f'mount {self.device_name} {self.mountpoint}', logger=fastluks_logger)
                     raise LUKSError('luksOpen failed, mapping not created.') # unlock and exit
         else:
-            echo('INFO', f'LUKS volume already opened and mapped to /dev/mapper/{self.cryptdev}')
+            fastluks_logger.info(f'LUKS volume already opened and mapped to /dev/mapper/{self.cryptdev}')
 
 
     def encryption_status(self):
         """Checks cryptdevice status, with the command cryptsetup status. It logs stdout, stderr
         and status to the logfile.
         """
-        fastluks_logger.info(f'Check {self.cryptdev} status with cryptsetup status')
+        fastluks_logger.debug(f'Check {self.cryptdev} status with cryptsetup status')
         run_command(f'cryptsetup -v status {self.cryptdev}', logger=fastluks_logger)
 
 
@@ -504,10 +473,10 @@ class device:
             if save_passphrase_locally:
                 config_luks['passphrase'] = s3cret
                 config.write(f)
-                echo('INFO', f'Device informations and key have been saved in {luks_cryptdev_file}')
+                fastluks_logger.info(f'Device informations and key have been saved in {luks_cryptdev_file}')
             else:
                 config.write(f)
-                echo('INFO', f'Device informations have been saved in {luks_cryptdev_file}')
+                fastluks_logger.info(f'Device informations have been saved in {luks_cryptdev_file}')
 
         run_command(f'dmsetup info /dev/mapper/{self.cryptdev}', logger=fastluks_logger)
         run_command(f'cryptsetup luksDump {self.device_name}', logger=fastluks_logger)
@@ -517,7 +486,7 @@ class device:
         """Paranoid mode function: it wipes the disk by overwriting the entire drive with random data.
         It may take some time.
         """
-        echo('INFO', 'Paranoid mode selected. Wiping disk')
+        fastluks_logger.info('Paranoid mode selected. Wiping disk')
         fastluks_logger.info('Wiping disk data by overwriting the entire drive with random data.')
         fastluks_logger.info('This might take time depending on the size & your machine!')
         
@@ -532,20 +501,20 @@ class device:
         :return: False if the mkfs command fails.
         :rtype: False, optional
         """
-        echo('INFO', 'Creating filesystem.')
-        fastluks_logger.info(f'Creating {self.filesystem} filesystem on /dev/mapper/{self.cryptdev}')
+        fastluks_logger.info('Creating filesystem.')
+        fastluks_logger.debug(f'Creating {self.filesystem} filesystem on /dev/mapper/{self.cryptdev}')
         _, _, mkfs_ec = run_command(f'mkfs -t {self.filesystem} /dev/mapper/{self.cryptdev}', logger=fastluks_logger)
         if mkfs_ec != 0:
-            echo('ERROR', f'While creating {self.filesystem} filesystem. Please check logs.')
-            echo('ERROR', 'Command mkfs failed!')
+            fastluks_logger.error(f'While creating {self.filesystem} filesystem. Please check logs.')
+            fastluks_logger.error('Command mkfs failed!')
             raise LUKSError('Command mkfs failed.') # unlock and exit
 
 
     def mount_vol(self):
         """Mounts the encrypted device to the 'mountpoint' specified in the device attributes.
         """
-        echo('INFO', 'Mounting encrypted device.')
-        fastluks_logger.info(f'Mounting /dev/mapper/{self.cryptdev} to {self.mountpoint}')
+        fastluks_logger.info('Mounting encrypted device.')
+        fastluks_logger.debug(f'Mounting /dev/mapper/{self.cryptdev} to {self.mountpoint}')
         run_command(f'mount /dev/mapper/{self.cryptdev} {self.mountpoint}', logger=fastluks_logger)
         run_command('df -Hv', logger=fastluks_logger)
 

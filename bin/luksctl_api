@@ -25,8 +25,7 @@ luksctl_api_path = luksctl_api_path_list[0]
 def cli_options():
     parser = argparse.ArgumentParser(description='LUKS storage management script API')
     parser.add_argument('-V', '--version', action='store_true', dest='version', default=False, help='Print luksctl_api version')
-    parser.add_argument('--infrastructure-config', choices=['single_vm','cluster'], dest='infrastructure_config', help='Infrastructure configuration')
-    parser.add_argument('--virtualization-type', default='', dest='virtualization_type', help='Virtualization type')
+    parser.add_argument('--daemons', nargs='*', default='', dest='daemons', help='Daemons to be restarted when the volume is opened')
     parser.add_argument('--node-list', nargs='*', dest='node_list', default='', help='Worker nodes IPs')
     parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin/sudo', help='PATH for the sudo command')
     parser.add_argument('--env-path', dest='env_path', help='Virtualenv path')
@@ -47,9 +46,8 @@ def cli_options():
 def master_setup(options):
 
     write_api_config(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
-                     infrastructure_config=options.infrastructure_config,
+                     daemons=options.daemons,
                      env_path=options.env_path,
-                     virtualization_type=options.virtualization_type,
                      node_list=options.node_list,
                      exports_list=options.exports_list,
                      sudo_path=options.sudo_path)

@@ -31,7 +31,7 @@ api_logger = create_logger(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
 ################################################################################
 # FUNCTIONS
 
-def write_api_config(luks_cryptdev_file, infrastructure_config, env_path, virtualization_type='', node_list='',
+def write_api_config(luks_cryptdev_file, env_path, daemons=[], node_list='',
                      exports_list='', sudo_path='/usr/bin/sudo'):
     """Writes the API configuration to the cryptdev .ini file in the luksctl_api section.
 
@@ -50,9 +50,8 @@ def write_api_config(luks_cryptdev_file, infrastructure_config, env_path, virtua
     config.add_section('luksctl_api')
     api_config = config['luksctl_api']
 
-    api_config['infrastructure_config'] = infrastructure_config
+    api_config['daemons'] = ','.join(daemons)
     api_config['env_path'] = env_path
-    api_config['virtualization_type'] = virtualization_type
     api_config['node_list'] = ','.join(node_list)
     api_config['exports_list'] = ','.join(exports_list)
     api_config['sudo_path'] = sudo_path
@@ -69,7 +68,7 @@ def read_api_config(luks_cryptdev_file, api_section):
     :param api_section: API section as defined in the cryptdev .ini file
     :type api_section: str
     :raises FileNotFoundError: Raises an error if the cryptdev .ini file is not found.
-    :return: Returns a dictionary containing key, value pairs for each API configuration option, i.e. infrastructure_configuration, virtualization_type, wn_ips, sudo_path and env_path
+    :return: Returns a dictionary containing key, value pairs for each API configuration option, i.e. daemons, wn_ips, sudo_path and env_path
     :rtype: dict
     """
     
@@ -80,6 +79,7 @@ def read_api_config(luks_cryptdev_file, api_section):
 
         # Get configuration dictionary
         api_config = dict(config[api_section].items())
+        api_config['daemons'] = api_config['node_list'].split(',')
         api_config['node_list'] = api_config['node_list'].split(',')
         api_config['exports_list'] = api_config['exports_list'].split(',')
 
@@ -167,25 +167,14 @@ class master:
         """Instantiates the master class. If luks_cryptdev_file (and eventually also api_section) is defined, other arguments will be ignored and
         the object's attributes are read from the cryptdev .ini file.
 
-        :param infrastructure_config: Infrastructure configuration, possible values are 'single_vm' or 'cluster', defaults to None
-        :type infrastructure_config: str, optional
-        :param virtualization_type: Virtualization type, either None or 'docker', defaults to None
-        :type virtualization_type: str, optional
-        :param node_list: List of nodes IPs in the cluster, defaults to None
-        :type node_list: list, optional
-        :param sudo_path: Path to the sudo command, defaults to '/usr/bin'
-        :type sudo_path: str, optional
-        :param env_path: Path to the virtual environment in which pyluks is installed, defaults to None
-        :type env_path: str, optional
         :param luks_cryptdev_file: Path to the cryptdev .ini file, defaults to None
-        :type luks_cryptdev_file: str, optional
+        :type luks_cryptdev_file: str
         :param api_section: API section as defined in the cryptdev .ini file, defaults to 'luksctl_api'
         :type api_section: str, optional
         """
         
         api_configs = read_api_config(luks_cryptdev_file=luks_cryptdev_file, api_section=api_section)
-        self.infrastructure_config = api_configs['infrastructure_config']
-        self.virtualization_type = api_configs['virtualization_type']
+        self.daemons = api_configs['daemons']
         self.node_list = api_configs['node_list']
         self.exports_list = api_configs['exports_list']
         self.sudo_path = api_configs['sudo_path']
@@ -195,8 +184,7 @@ class master:
         self.distro_id = distro.id()
 
 
-    def get_infrastructure_config(self): return self.infrastructure_config
-    def get_virtualization_type(self): return self.virtualization_type
+    def get_daemons(self): return self.daemons
     def get_node_list(self): return self.node_list
     def get_sudo_path(self): return self.sudo_path
     def get_env_path(self): return self.env_path
@@ -262,6 +250,10 @@ class master:
                                  secret_path=secret_path,
                                  secret_key=secret_key)
             
+            # Stop daemons before opening volume
+            if self.daemons:
+                self.stop_daemons()
+
             # Open volume
             open_command = f'printf "{secret}\n" | {self.sudo_path} {self.luksctl_cmd} open' 
             stdout, stderr, status = run_command(open_command)
@@ -271,10 +263,8 @@ class master:
             api_logger.debug(f'Volume status: {status}')
 
             if str(status) == '0':
-                if self.infrastructure_config == 'cluster':
-                    self.nfs_restart()
-                if self.virtualization_type == 'docker':
-                    self.docker_restart
+                if self.daemons:
+                    self.start_daemons()
                 return {'volume_state': 'mounted' }
 
             elif str(status)  == '1':
@@ -284,36 +274,31 @@ class master:
                 return {'volume_state': 'unavailable', 'output': stdout, 'stderr': stderr}
 
 
-    def nfs_restart(self):
-        """Restarts the nfs service and calls the master.mount_nfs_on_wns method.
-        """
+    def stop_daemons(self):
+        "Stop daemons that have to be stopped before opening the volume"
 
-        api_logger.debug(f'Restarting NFS on: {self.distro_id}')
-        
-        if self.distro_id == 'centos':
-            restart_command = f'{self.sudo_path} systemctl restart nfs-server'
-        elif self.distro_id == 'ubuntu':
-            restart_command = f'{self.sudo_path} systemctl restart nfs-kernel-server'
-        else:
-            restart_command = ''
-        
-        api_logger.debug(restart_command)
+        for daemon in self.daemons:
+            api_logger.debug(f'Restarting {daemon}')
 
-        stdout, stderr, status = run_command(restart_command)
+            stop_command = f'{self.sudo_path} systemctl stop {daemon}'
+            api_logger.debug(stop_command)
+            stdout, stderr, status = run_command(stop_command)
 
-        api_logger.debug(f'NFS status: {status}')
-        api_logger.debug(f'NFS status stdout: {stdout}')
-        api_logger.debug(f'NFS status stderr: {stderr}')
+            api_logger.debug(f'{daemon} status: {status}')
+            api_logger.debug(f'{daemon} status stdout: {stdout}')
+            api_logger.debug(f'{daemon} status stderr: {stderr}')
 
+    def start_daemons(self):
+        "Start deamons after opening the volume"
 
-    def docker_restart(self):
-        """Restarts the docker service.
-        """
+        for daemon in self.daemons:
+            api_logger.debug(f'Restarting {daemon}')
 
-        restart_command = f'{self.sudo_path} systemctl restart docker'
+            start_command = f'{self.sudo_path} systemctl start {daemon}'
+            api_logger.debug(start_command)
+            stdout, stderr, status = run_command(start_command)
 
-        stdout, stderr, status = run_command(restart_command)
+            api_logger.debug(f'{daemon} status: {status}')
+            api_logger.debug(f'{daemon} status stdout: {stdout}')
+            api_logger.debug(f'{daemon} status stderr: {stderr}')
 
-        api_logger.debug(f'Docker service status: {status}')
-        api_logger.debug(f'Docker service stdout: {stdout}')
-        api_logger.debug(f'Docker service stderr: {stderr}')

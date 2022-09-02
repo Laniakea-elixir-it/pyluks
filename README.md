@@ -65,15 +65,11 @@ luksctl close
 In order to setup the API, the command `luksctl_api` can be used indicating the type of computing node on which the API is installed and its options, for example:
 ```bash
 # Install the API on a single virtual machine, using a self signed certificate
-luksctl_api master --infrastructure_config single_vm --ssl --user luksctl_api
+luksctl_api master --ssl --user luksctl_api
 ```
 ```bash
-# Install the API on the master node of a cloud using a self signed certificate
-luksctl_api master --infrastructure_config cluster --ssl --node-list wn1 wn2 wn3 
-```
-```bash
-# Install the API on a computing node
-luksctl_api wn --nfs-mountpoint-list /export
+# Install the API on the master node of a cluster (nfs is used to share the encrypted volume data) using a self signed certificate
+luksctl_api master --daemons nfs cluster --ssl --node-list wn1 wn2 wn3 
 ```
 
 By default, the API service is run by the user `luksctl_api`, which should have the permission to run the `luksctl` command. To run the API under a different user specify the `--user` argument.

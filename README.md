@@ -69,7 +69,7 @@ luksctl_api master --ssl --user luksctl_api
 ```
 ```bash
 # Install the API on the master node of a cluster (nfs is used to share the encrypted volume data) using a self signed certificate
-luksctl_api master --daemons nfs cluster --ssl --node-list wn1 wn2 wn3 
+luksctl_api master --daemons nfs-server --ssl 
 ```
 
-By default, the API service is run by the user `luksctl_api`, which should have the permission to run the `luksctl` command. To run the API under a different user specify the `--user` argument.
+By default, the API service is run by the user `luksctl_api`, which should have the permission to run the `luksctl` command. Also, the user should have the permissions to run `systemctl start` and `systemctl stop` for the daemons specified. To run the API under a different user specify the `--user` argument.

@@ -28,7 +28,7 @@ def cli_options():
     parser.add_argument('--daemons', nargs='*', default='', dest='daemons', help='Daemons to be restarted when the volume is opened')
     parser.add_argument('--node-list', nargs='*', dest='node_list', default='', help='Worker nodes IPs')
     parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin/sudo', help='PATH for the sudo command')
-    parser.add_argument('--env-path', dest='env_path', help='Virtualenv path')
+    parser.add_argument('--env-path', dest='env_path', default='/opt/pyluks', help='Virtualenv path')
     parser.add_argument('--ssl', action='store_true', dest='ssl', default=False, help='Use ssl self signed certificate')
     parser.add_argument('--ssl-cert-file', dest='cert_file', default='/etc/luks/gunicorn-cert.pem', help='SSL certificate file')
     parser.add_argument('--ssl-key-file', dest='key_file', default='/etc/luks/gunicorn-key.pem', help='SSL key file')

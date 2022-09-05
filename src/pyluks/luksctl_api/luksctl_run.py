@@ -79,7 +79,7 @@ def read_api_config(luks_cryptdev_file, api_section):
 
         # Get configuration dictionary
         api_config = dict(config[api_section].items())
-        api_config['daemons'] = api_config['node_list'].split(',')
+        api_config['daemons'] = api_config['daemons'].split(',')
         api_config['node_list'] = api_config['node_list'].split(',')
         api_config['exports_list'] = api_config['exports_list'].split(',')
 

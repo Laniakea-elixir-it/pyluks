@@ -255,6 +255,7 @@ class master:
                 self.stop_daemons()
 
             # Open volume
+            api_logger.debug(f'Opening volume')
             open_command = f'printf "{secret}\n" | {self.sudo_path} {self.luksctl_cmd} open' 
             stdout, stderr, status = run_command(open_command)
 
@@ -278,7 +279,7 @@ class master:
         "Stop daemons that have to be stopped before opening the volume"
 
         for daemon in self.daemons:
-            api_logger.debug(f'Restarting {daemon}')
+            api_logger.debug(f'Stopping {daemon}')
 
             stop_command = f'{self.sudo_path} systemctl stop {daemon}'
             api_logger.debug(stop_command)
@@ -292,7 +293,7 @@ class master:
         "Start deamons after opening the volume"
 
         for daemon in self.daemons:
-            api_logger.debug(f'Restarting {daemon}')
+            api_logger.debug(f'Starting {daemon}')
 
             start_command = f'{self.sudo_path} systemctl start {daemon}'
             api_logger.debug(start_command)

@@ -35,13 +35,23 @@ pyluks can be installed using pip. In order to avoid problems when installing ``
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User documentation:
  
    fastluks
    fastluks_bin
    cryptdev_file
    luksctl
    luksctl_api
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developers documentation:
+   test_pyluks
+   update_pyluks
+ 
+.. toctree::
+   :maxdepth: 2
+   :caption: Source code:
    modules
 
 Indices and tables

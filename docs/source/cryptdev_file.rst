@@ -36,4 +36,12 @@ It is composed of two sections:
         luksctl = /tmp/luksctl.log
         luksctl_api = /tmp/luksctl-api.log
 
+* The ``luksctl_api`` section contains the parameters for the :ref:`luksctl_api`. Each field can be modified. The
+  daemons variable can be modified to tell the API which daemons to restart with systemctl.
 
+    .. code-block:: ini
+
+        [logs]
+        env_path = /opt/pyluks
+        daemons = nfs-server,docker
+        sudo_path = /usr/bin/sudo

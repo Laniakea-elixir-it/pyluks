@@ -34,16 +34,16 @@ Each subpackage functionalities can be accessed thorugh a command line tool.
 ## fastluks
 To perform encryption and volume setup with default parameters, the `fastluks` command can be used inside the virtual environment:
 ```bash
-fastluks
+fastluks --device /dev/vdb
 ```
 The encryption passphrase can be stored locally and/or on Hashicorp Vault.
 - To store the passphrase locally (this is usually done for testing purposes):
 ```bash
-fastluks --save-passphrase-locally
+fastluks --device /dev/vdb --save-passphrase-locally
 ```
 - To store the passphrase on Vault, the flag `--vault` must be used with the required arguments specified:
 <pre>
-fastluks --vault --vault-url <i>url</i> --wrapping-token <i>token</i> --secret-path <i>path</i> --user-key <i>key</i>
+fastluks --device /dev/vdb --vault --vault-url <i>url</i> --wrapping-token <i>token</i> --secret-path <i>path</i> --user-key <i>key</i>
 </pre>
 
 
@@ -65,15 +65,11 @@ luksctl close
 In order to setup the API, the command `luksctl_api` can be used indicating the type of computing node on which the API is installed and its options, for example:
 ```bash
 # Install the API on a single virtual machine, using a self signed certificate
-luksctl_api master --infrastructure_config single_vm --ssl --user luksctl_api
+luksctl_api --ssl --user luksctl_api
 ```
 ```bash
-# Install the API on the master node of a cloud using a self signed certificate
-luksctl_api master --infrastructure_config cluster --ssl --node-list wn1 wn2 wn3 
-```
-```bash
-# Install the API on a computing node
-luksctl_api wn --nfs-mountpoint-list /export
+# Install the API on the master node of a cluster (nfs is used to share the encrypted volume data) using a self signed certificate
+luksctl_api --daemons nfs-server --ssl 
 ```
 
-By default, the API service is run by the user `luksctl_api`, which should have the permission to run the `luksctl` command. To run the API under a different user specify the `--user` argument.
+By default, the API service is run by the user `luksctl_api`, which should have the permission to run the `luksctl` command. Also, the user should have the permissions to run `systemctl start` and `systemctl stop` for the daemons specified. To run the API under a different user specify the `--user` argument.

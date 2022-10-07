@@ -8,7 +8,7 @@ import argparse
 from pyluks import __version__
 from pyluks.luksctl_api import __path__ as luksctl_api_path_list
 from pyluks.luksctl_api.luksctl_run import __prefix__ as environment_prefix
-from pyluks.luksctl_api.luksctl_run import master, wn
+from pyluks.luksctl_api.luksctl_run import master, write_api_config, write_systemd_unit_file
 from pyluks.luksctl_api.ssl_certificate import generate_self_signed_cert
 
 
@@ -25,27 +25,16 @@ luksctl_api_path = luksctl_api_path_list[0]
 def cli_options():
     parser = argparse.ArgumentParser(description='LUKS storage management script API')
     parser.add_argument('-V', '--version', action='store_true', dest='version', default=False, help='Print luksctl_api version')
-    subparsers = parser.add_subparsers(help='Type of node')
-
-    master_parser = subparsers.add_parser('master')
-    master_parser.add_argument('--infrastructure-config', choices=['single_vm','cluster'], dest='infrastructure_config', help='Infrastructure configuration')
-    master_parser.add_argument('--virtualization-type', default=None, dest='virtualization_type', help='Virtualization type')
-    master_parser.add_argument('--node-list', nargs='*', dest='node_list', default=None, help='Worker nodes IPs')
-    master_parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin', help='PATH for the sudo command')
-    master_parser.add_argument('--env-path', dest='env_path', default=None, help='Virtualenv path')
-    master_parser.add_argument('--ssl', action='store_true', dest='ssl', default=False, help='Use ssl self signed certificate')
-    master_parser.add_argument('--ssl-cert-file', dest='cert_file', default='/etc/luks/gunicorn-cert.pem', help='SSL certificate file')
-    master_parser.add_argument('--ssl-key-file', dest='key_file', default='/etc/luks/gunicorn-key.pem', help='SSL key file')
-    master_parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
-    master_parser.add_argument('--user', dest='user', default='luksctl_api', help='luksctl-api service user')
-    master_parser.set_defaults(setup_function=master_setup)
-
-    wn_parser = subparsers.add_parser('wn')
-    wn_parser.add_argument('--nfs-mountpoint-list', nargs='*', dest='nfs_mountpoint_list', help='NFS mountpoint list')
-    wn_parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin', help='PATH for sudo and mount command')
-    wn_parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
-    wn_parser.add_argument('--user', dest='user', default='luksctl_api_wn', help='luksctl-api service user')
-    wn_parser.set_defaults(setup_function=wn_setup)
+    parser.add_argument('--daemons', nargs='*', default='', dest='daemons', help='Daemons to be restarted when the volume is opened')
+    parser.add_argument('--node-list', nargs='*', dest='node_list', default='', help='Worker nodes IPs')
+    parser.add_argument('--sudo-path', dest='sudo_path', default='/usr/bin/sudo', help='PATH for the sudo command')
+    parser.add_argument('--env-path', dest='env_path', default='/opt/pyluks', help='Virtualenv path')
+    parser.add_argument('--ssl', action='store_true', dest='ssl', default=False, help='Use ssl self signed certificate')
+    parser.add_argument('--ssl-cert-file', dest='cert_file', default='/etc/luks/gunicorn-cert.pem', help='SSL certificate file')
+    parser.add_argument('--ssl-key-file', dest='key_file', default='/etc/luks/gunicorn-key.pem', help='SSL key file')
+    parser.add_argument('--gunicorn-config', dest='gunicorn_config_file', default='/etc/luks/gunicorn.conf.py', help='Gunicorn config file path')
+    parser.add_argument('--user', dest='user', default='luksctl_api', help='luksctl-api service user')
+    parser.add_argument('--exports', nargs='*', dest='exports_list', default=['/export'], help='Directories exported with nfs')
 
     return parser.parse_args()
 
@@ -55,14 +44,13 @@ def cli_options():
 # FUNCTIONS
 
 def master_setup(options):
-    
-    master_node = master(infrastructure_config=options.infrastructure_config,
-                         virtualization_type=options.virtualization_type,
-                         node_list=options.node_list,
-                         sudo_path=options.sudo_path,
-                         env_path=options.env_path)
 
-    master_node.write_api_config()
+    write_api_config(luks_cryptdev_file='/etc/luks/luks-cryptdev.ini',
+                     daemons=options.daemons,
+                     env_path=options.env_path,
+                     node_list=options.node_list,
+                     exports_list=options.exports_list,
+                     sudo_path=options.sudo_path)
 
     if options.ssl:
         generate_self_signed_cert(cert_file=options.cert_file,
@@ -71,25 +59,11 @@ def master_setup(options):
     shutil.copy(src=f'{luksctl_api_path}/gunicorn.conf.py',
                 dst=options.gunicorn_config_file)
 
-    master_node.write_systemd_unit_file(working_directory=luksctl_api_path,
-                                        environment_prefix=environment_prefix,
-                                        user=options.user,
-                                        group=options.user)
+    write_systemd_unit_file(working_directory=luksctl_api_path,
+                            environment_prefix=environment_prefix,
+                            user=options.user,
+                            group=options.user)
 
-
-def wn_setup(options):
-
-    working_node = wn(nfs_mountpoint_list=options.nfs_mountpoint_list,
-                      sudo_path=options.sudo_path)
-
-    working_node.write_api_config()
-
-    shutil.copy(src=f'{luksctl_api_path}/gunicorn.conf.py',
-                dst=options.gunicorn_config_file)
-
-    working_node.write_systemd_unit_file(working_directory=luksctl_api_path,
-                                         environment_prefix=environment_prefix,
-                                         user=options.user, group=options.user)
 
 
 ################################################################################
@@ -101,4 +75,4 @@ if __name__ == "__main__":
     if options.version:
         print('pyluks package: ' + __version__)
     else:
-        options.setup_function(options)
+        master_setup(options)

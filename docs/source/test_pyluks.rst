@@ -1,4 +1,4 @@
-.. _developers_documentation:
+.. _test_pyluks:
 
 ========================
 Test the pyluks package
@@ -29,6 +29,7 @@ The VM specifications can be modified through the `variables.tf` file.
 Source the openstack rc file, then run terraform to create the infrastructure:
 
 .. code-block:: console
+
     $ terraform init
     $ terraform apply
 
@@ -36,6 +37,7 @@ When terraform is done creating the VMs, it will return their IP addresses. Save
 variables (this will be needed when running some Ansible playbooks):
 
 .. code-block:: console
+
     $ export MASTER_IP=$(terraform output -raw master)
     $ export WORKER_IP=$(terraform output -raw worker)
 
@@ -55,6 +57,7 @@ The pyluks version stored in a GitHub branch or the latest in PyPI can be tested
 Then, run the playbook:
 
 .. code-block:: console
+
     $ cd plays
     $ ansible-playbook -i inventory/hosts pyluks_dev_test.yml
 
@@ -82,6 +85,7 @@ To configure NFS to share the external volume mountpoint of the master node with
 Then, to configure Docker on the master node to store the container images in the external volume, run the playbook:
 
 .. code-block:: console
+
     $ ansible-playbook -i inventory/hosts docker_playbook.yml
 
 

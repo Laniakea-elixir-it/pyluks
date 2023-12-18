@@ -4,3 +4,22 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyluks"
+version = "0.0.2beta1"
+authors = [
+  { name="Daniele Colombo", email="daniele.colombo39@gmail.com" },
+  { name="Marco Antonio Tangaro", email="ma.tangaro@ibiom.cnr.it" },
+]
+description = "Storage encryption through LUKS"
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+Homepage = "https://github.com/Laniakea-elixir-it/pyluks"
+Issues = "https://github.com/Laniakea-elixir-it/pyluks/issues"

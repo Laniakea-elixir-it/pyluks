@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyluks"
-version = "0.0.2beta2"
+version = "0.0.2beta4"
 authors = [
   { name="Daniele Colombo", email="daniele.colombo39@gmail.com" },
   { name="Marco Antonio Tangaro", email="ma.tangaro@ibiom.cnr.it" },

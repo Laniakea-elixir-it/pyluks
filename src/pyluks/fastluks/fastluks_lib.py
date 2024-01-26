@@ -21,7 +21,7 @@ from ..vault_support import write_secret_to_vault
 alphanum = ascii_letters + digits
 #now = datetime.now().strftime('-%b-%d-%y-%H%M%S')
 # Get Distribution
-# Ubuntu and centos currently supported
+# Ubuntu, centos, rocky currently supported
 def check_distro(function):
     """Decorator function to check that the wrapped function is run on Ubuntu or CentOS.
 
@@ -34,8 +34,8 @@ def check_distro(function):
     global DISTNAME
     DISTNAME = distro.id()
     def wrapper_function(*args, **kwargs):
-        if DISTNAME not in ['ubuntu','centos']:
-            raise Exception('Distribution not supported: Ubuntu and Centos currently supported')
+        if DISTNAME not in ['ubuntu','centos','rocky']:
+            raise Exception('Distribution not supported: Ubuntu, CentOS 7, and RockyLinux 9 currently supported')
         return function()
     return wrapper_function
 
@@ -86,7 +86,7 @@ def install_cryptsetup(logger=None):
         fastluks_logger.info('Distribution: Ubuntu. Using apt.')
         run_command('apt-get install -y cryptsetup pv', logger)
     else:
-        fastluks_logger.info('Distribution: CentOS. Using yum.')
+        fastluks_logger.info('Distribution: CentOS or RockyLinux. Using yum.')
         run_command('yum install -y cryptsetup-luks pv', logger)
 
 
